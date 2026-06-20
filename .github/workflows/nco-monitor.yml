@@ -37,5 +37,6 @@ jobs:
             echo "Sin cambios en NCO"
           else
             git commit -m "chore: actualizar NCO Guayas [$(date -u '+%Y-%m-%d %H:%M') UTC]"
-            git push
+            git pull --rebase origin claude/eager-wright-zmtjvx
+            git push -u origin claude/eager-wright-zmtjvx
           fi
