@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SERCOP Monitor — Previfuego</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: #0f172a;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border-bottom: 1px solid #334155;
+      padding: 20px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo {
+      width: 48px;
+      height: 48px;
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+
+    header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+
+    header p {
+      font-size: 13px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    .badge-live {
+      margin-left: auto;
+      background: #16a34a;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.6; }
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 24px; }
+
+    /* Stats */
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .stat-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px;
+    }
+
+    .stat-label {
+      font-size: 12px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-size: 32px;
+      font-weight: 800;
+      color: #f1f5f9;
+    }
+
+    .stat-value.green { color: #4ade80; }
+    .stat-value.yellow { color: #fbbf24; }
+    .stat-value.red { color: #f87171; }
+
+    /* Search bar */
+    .search-bar {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+    }
+
+    .search-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .search-group label {
+      font-size: 12px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .search-group input,
+    .search-group select {
+      background: #0f172a;
+      border: 1px solid #334155;
+      color: #e2e8f0;
+      padding: 10px 14px;
+      border-radius: 8px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .search-group input:focus,
+    .search-group select:focus {
+      border-color: #ef4444;
+    }
+
+    .btn {
+      padding: 10px 24px;
+      border-radius: 8px;
+      border: none;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #ef4444;
+      color: white;
+    }
+
+    .btn-primary:hover { background: #dc2626; }
+    .btn-primary:disabled { background: #7f1d1d; cursor: not-allowed; }
+
+    .btn-secondary {
+      background: #334155;
+      color: #e2e8f0;
+    }
+
+    .btn-secondary:hover { background: #475569; }
+
+    /* Keywords */
+    .keywords {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    .keyword-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .keyword-btn:hover,
+    .keyword-btn.active {
+      background: #ef4444;
+      border-color: #ef4444;
+      color: white;
+    }
+
+    /* Results */
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .results-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #f1f5f9;
+    }
+
+    .results-count {
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    /* Process card */
+    .process-card {
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 12px;
+      transition: border-color 0.2s;
+      cursor: pointer;
+    }
+
+    .process-card:hover { border-color: #ef4444; }
+
+    .process-card-header {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 12px;
+    }
+
+    .process-type-badge {
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .type-SIE { background: #1d4ed8; color: white; }
+    .type-MC  { background: #7c3aed; color: white; }
+    .type-IC  { background: #0369a1; color: white; }
+    .type-LC  { background: #0f766e; color: white; }
+    .type-CD  { background: #92400e; color: #fef3c7; }
+    .type-other { background: #334155; color: #e2e8f0; }
+
+    .process-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #f1f5f9;
+      line-height: 1.4;
+      flex: 1;
+    }
+
+    .process-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+      margin-top: 12px;
+    }
+
+    .meta-item { display: flex; flex-direction: column; gap: 2px; }
+    .meta-label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em; }
+    .meta-value { font-size: 14px; color: #cbd5e1; font-weight: 500; }
+    .meta-value.highlight { color: #4ade80; font-weight: 700; }
+    .meta-value.warning { color: #fbbf24; font-weight: 700; }
+    .meta-value.danger { color: #f87171; }
+
+    .process-footer {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid #334155;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .entidad-name {
+      font-size: 13px;
+      color: #94a3b8;
+    }
+
+    .btn-ver {
+      font-size: 12px;
+      padding: 6px 16px;
+      background: transparent;
+      border: 1px solid #ef4444;
+      color: #ef4444;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-ver:hover { background: #ef4444; color: white; }
+
+    /* Loading */
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: #64748b;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #334155;
+      border-top-color: #ef4444;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .empty {
+      text-align: center;
+      padding: 60px 20px;
+      color: #64748b;
+    }
+
+    .empty-icon { font-size: 48px; margin-bottom: 16px; }
+
+    /* Alert de días restantes */
+    .dias-badge {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .dias-ok { background: #16a34a22; color: #4ade80; border: 1px solid #16a34a44; }
+    .dias-warn { background: #d9770622; color: #fbbf24; border: 1px solid #d9770644; }
+    .dias-urgent { background: #dc262622; color: #f87171; border: 1px solid #dc262644; }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .tab {
+      padding: 8px 18px;
+      border-radius: 7px;
+      border: none;
+      background: transparent;
+      color: #64748b;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .tab.active {
+      background: #ef4444;
+      color: white;
+    }
+
+    .tab:hover:not(.active) { background: #334155; color: #e2e8f0; }
+
+    /* Error */
+    .error-box {
+      background: #7f1d1d22;
+      border: 1px solid #ef444444;
+      border-radius: 10px;
+      padding: 20px;
+      color: #fca5a5;
+      text-align: center;
+    }
+
+    /* Paginación */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 24px;
+      flex-wrap: wrap;
+    }
+
+    .page-btn {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #94a3b8;
+      padding: 8px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .page-btn:hover, .page-btn.active {
+      background: #ef4444;
+      border-color: #ef4444;
+      color: white;
+    }
+
+    .page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Estrategia banner */
+    .strategy-banner {
+      background: linear-gradient(135deg, #1e3a1e, #14271a);
+      border: 1px solid #16a34a44;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+
+    .strategy-banner h3 {
+      color: #4ade80;
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .strategy-banner p {
+      color: #86efac;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .strategy-banner ul {
+      margin-top: 8px;
+      padding-left: 20px;
+      color: #86efac;
+      font-size: 13px;
+      line-height: 1.8;
+    }
+
+    @media (max-width: 600px) {
+      .search-bar { flex-direction: column; }
+      .process-meta { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">🔥</div>
+  <div>
+    <h1>SERCOP Monitor — Previfuego</h1>
+    <p>Contratos de extintores y protección contra incendios</p>
+  </div>
+  <span class="badge-live">● EN VIVO</span>
+</header>
+
+<div class="container">
+
+  <!-- Estrategia -->
+  <div class="strategy-banner">
+    <h3>⚡ Estrategia para ganar contratos</h3>
+    <ul>
+      <li><strong>Subasta Inversa (SIE):</strong> Gana el precio más bajo. Aquí SÍ vale tu precio competitivo.</li>
+      <li><strong>Menor Cuantía (MC):</strong> Sorteo + mejor oferta. Buena oportunidad.</li>
+      <li><strong>Catálogo Electrónico:</strong> Regístrate como proveedor permanente para que te compren directamente.</li>
+      <li><strong>Ínfima Cuantía (IC):</strong> Evítalas si ya te han ignorado — suelen estar arregladas.</li>
+    </ul>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">Total encontrados</div>
+      <div class="stat-value" id="stat-total">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Subastas Inversas (SIE)</div>
+      <div class="stat-value green" id="stat-sie">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Menor Cuantía (MC)</div>
+      <div class="stat-value yellow" id="stat-mc">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Cierre en ≤7 días</div>
+      <div class="stat-value red" id="stat-urgent">—</div>
+    </div>
+  </div>
+
+  <!-- Búsqueda -->
+  <div class="search-bar">
+    <div class="search-group" style="flex:2">
+      <label>Buscar</label>
+      <input type="text" id="input-keyword" value="extintores" placeholder="ej: extintores, recarga, incendios..." />
+    </div>
+    <div class="search-group">
+      <label>Tipo de proceso</label>
+      <select id="input-tipo">
+        <option value="">Todos</option>
+        <option value="SIE">Subasta Inversa (SIE)</option>
+        <option value="MC">Menor Cuantía (MC)</option>
+        <option value="IC">Ínfima Cuantía (IC)</option>
+        <option value="LC">Licitación (LC)</option>
+        <option value="CD">Contratación Directa (CD)</option>
+      </select>
+    </div>
+    <div class="search-group">
+      <label>Estado</label>
+      <select id="input-estado">
+        <option value="1">En proceso (abiertos)</option>
+        <option value="">Todos</option>
+        <option value="3">Adjudicados</option>
+        <option value="4">Desiertos</option>
+      </select>
+    </div>
+    <div class="search-group" style="min-width:auto; flex:0">
+      <label>&nbsp;</label>
+      <button class="btn btn-primary" id="btn-buscar" onclick="buscar(1)">🔍 Buscar</button>
+    </div>
+  </div>
+
+  <!-- Keywords rápidas -->
+  <div class="keywords">
+    <span style="font-size:12px; color:#64748b; align-self:center; margin-right:4px;">Búsquedas rápidas:</span>
+    <button class="keyword-btn active" onclick="quickSearch('extintores')">Extintores</button>
+    <button class="keyword-btn" onclick="quickSearch('recarga extintores')">Recarga extintores</button>
+    <button class="keyword-btn" onclick="quickSearch('mantenimiento extintores')">Mantenimiento extintores</button>
+    <button class="keyword-btn" onclick="quickSearch('proteccion contra incendios')">Protección incendios</button>
+    <button class="keyword-btn" onclick="quickSearch('equipos contra incendio')">Equipos contra incendio</button>
+    <button class="keyword-btn" onclick="quickSearch('extintor co2')">CO2</button>
+    <button class="keyword-btn" onclick="quickSearch('sistemas contra incendio')">Sistemas CI</button>
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button class="tab active" id="tab-lista" onclick="switchTab('lista')">📋 Lista de procesos</button>
+    <button class="tab" id="tab-estrategia" onclick="switchTab('estrategia')">🎯 Guía para ganar</button>
+  </div>
+
+  <!-- Panel lista -->
+  <div id="panel-lista">
+    <div class="results-header">
+      <span class="results-title" id="results-title">Resultados</span>
+      <span class="results-count" id="results-count"></span>
+    </div>
+    <div id="results-container">
+      <div class="empty">
+        <div class="empty-icon">🔍</div>
+        <p>Presiona "Buscar" para encontrar contratos disponibles</p>
+      </div>
+    </div>
+    <div class="pagination" id="pagination"></div>
+  </div>
+
+  <!-- Panel estrategia -->
+  <div id="panel-estrategia" style="display:none">
+    <div style="display:grid; gap:16px;">
+
+      <div class="process-card" style="border-color:#1d4ed8">
+        <h3 style="color:#60a5fa; margin-bottom:12px;">🏆 Subasta Inversa Electrónica (SIE) — Tu mejor oportunidad</h3>
+        <p style="color:#94a3b8; line-height:1.7; font-size:14px;">
+          Es el proceso más transparente. Las entidades publican qué necesitan y los proveedores compiten bajando precios en tiempo real. <strong style="color:#e2e8f0">Gana el precio más bajo sin favoritismos.</strong>
+        </p>
+        <div style="margin-top:16px; background:#0f172a; border-radius:8px; padding:16px;">
+          <p style="font-size:13px; color:#4ade80; font-weight:700; margin-bottom:8px;">✅ Lo que necesitas para participar:</p>
+          <ul style="font-size:13px; color:#94a3b8; padding-left:20px; line-height:2;">
+            <li>RUP activo (ya lo tienes: PREVIFUEGO22)</li>
+            <li>Token de firma electrónica vigente</li>
+            <li>Estar en la categoría correcta del CPC (clasificador de productos)</li>
+            <li>No tener inhabilidades en SERCOP</li>
+          </ul>
+        </div>
+        <div style="margin-top:12px; background:#0f172a; border-radius:8px; padding:16px;">
+          <p style="font-size:13px; color:#fbbf24; font-weight:700; margin-bottom:8px;">⚡ Cómo ganar:</p>
+          <ul style="font-size:13px; color:#94a3b8; padding-left:20px; line-height:2;">
+            <li>Calcula tu costo real mínimo antes de entrar a pujar</li>
+            <li>Entra tarde a la subasta — espera a ver los precios de la competencia</li>
+            <li>Ten preparada la documentación habilitante desde antes</li>
+            <li>El sistema cierra automáticamente cuando nadie baja más</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="process-card" style="border-color:#7c3aed">
+        <h3 style="color:#a78bfa; margin-bottom:12px;">🎲 Menor Cuantía (MC) — Segunda mejor opción</h3>
+        <p style="color:#94a3b8; line-height:1.7; font-size:14px;">
+          Para montos entre $6.944 y $104.170 (2024). Hay un sorteo entre proveedores habilitados y luego evaluación de oferta. <strong style="color:#e2e8f0">Más justo que ínfima cuantía.</strong>
+        </p>
+        <div style="margin-top:12px; background:#0f172a; border-radius:8px; padding:16px;">
+          <p style="font-size:13px; color:#4ade80; font-weight:700; margin-bottom:8px;">✅ Estrategia:</p>
+          <ul style="font-size:13px; color:#94a3b8; padding-left:20px; line-height:2;">
+            <li>Asegúrate que tu categoría CPC esté correcta en el RUP para entrar al sorteo</li>
+            <li>Si sales sorteado, presenta oferta técnica sólida + precio competitivo</li>
+            <li>La documentación habilitante debe estar al día siempre</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="process-card" style="border-color:#0369a1">
+        <h3 style="color:#38bdf8; margin-bottom:12px;">📦 Catálogo Electrónico — Ingreso pasivo de contratos</h3>
+        <p style="color:#94a3b8; line-height:1.7; font-size:14px;">
+          Te registras como proveedor permanente en el catálogo de SERCOP. Las entidades públicas pueden comprarte directamente sin proceso. <strong style="color:#e2e8f0">Una vez que entras, los contratos llegan solos.</strong>
+        </p>
+        <div style="margin-top:12px; background:#0f172a; border-radius:8px; padding:16px;">
+          <p style="font-size:13px; color:#fbbf24; font-weight:700; margin-bottom:8px;">⚡ Cómo registrarte:</p>
+          <ul style="font-size:13px; color:#94a3b8; padding-left:20px; line-height:2;">
+            <li>Ingresa al portal SERCOP con tu cuenta PREVIFUEGO22</li>
+            <li>Ve a "Catálogo Electrónico" → "Ofertas del Catálogo"</li>
+            <li>Registra tus productos: extintores PQS, CO2, K, recarga, mantenimiento</li>
+            <li>Define precios y condiciones. SERCOP los publica y las entidades compran directamente</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="process-card" style="border-color:#dc2626">
+        <h3 style="color:#f87171; margin-bottom:12px;">🚫 Ínfima Cuantía (IC) — Evítala o úsala con inteligencia</h3>
+        <p style="color:#94a3b8; line-height:1.7; font-size:14px;">
+          Montos menores a $6.944. La entidad elige libremente entre 3 proformas. <strong style="color:#f87171">Muchas veces el proveedor ya está elegido antes de publicar.</strong>
+        </p>
+        <div style="margin-top:12px; background:#0f172a; border-radius:8px; padding:16px;">
+          <p style="font-size:13px; color:#fbbf24; font-weight:700; margin-bottom:8px;">⚡ Si igual quieres participar:</p>
+          <ul style="font-size:13px; color:#94a3b8; padding-left:20px; line-height:2;">
+            <li>Contacta a la unidad de compras <strong>antes</strong> que publiquen la necesidad</li>
+            <li>Ofrece tu servicio directamente a instituciones cercanas a ti</li>
+            <li>El que llega primero tiene ventaja — no esperes que publiquen</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="process-card" style="border-color:#16a34a">
+        <h3 style="color:#4ade80; margin-bottom:12px;">📋 Documentos que SIEMPRE debes tener listos</h3>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:12px;">
+          <div style="background:#0f172a; border-radius:8px; padding:14px;">
+            <p style="font-size:12px; color:#16a34a; font-weight:700; margin-bottom:8px;">DOCUMENTOS EMPRESA</p>
+            <ul style="font-size:12px; color:#94a3b8; padding-left:16px; line-height:2;">
+              <li>RUC actualizado</li>
+              <li>Nombramiento representante legal</li>
+              <li>Cédula y papeleta de votación</li>
+              <li>Declaración de impuestos al día</li>
+              <li>Certificado de cumplimiento obligaciones IESS</li>
+              <li>No adeudar al SRI</li>
+            </ul>
+          </div>
+          <div style="background:#0f172a; border-radius:8px; padding:14px;">
+            <p style="font-size:12px; color:#16a34a; font-weight:700; margin-bottom:8px;">DOCUMENTOS TÉCNICOS</p>
+            <ul style="font-size:12px; color:#94a3b8; padding-left:16px; line-height:2;">
+              <li>Certificado técnico del servicio (INEN)</li>
+              <li>Hojas de vida técnicos con experiencia</li>
+              <li>Certificados de trabajos anteriores</li>
+              <li>Catálogo de productos con especificaciones</li>
+              <li>Carta de garantía del servicio</li>
+              <li>Fotos/evidencias de trabajos realizados</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+const API_BASE = 'https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/api/v1';
+
+let currentPage = 1;
+let totalPages = 1;
+let allResults = [];
+
+const TIPOS = {
+  'SIE': { label: 'Subasta Inversa', css: 'type-SIE' },
+  'MC':  { label: 'Menor Cuantía',   css: 'type-MC'  },
+  'IC':  { label: 'Ínfima Cuantía',  css: 'type-IC'  },
+  'LC':  { label: 'Licitación',      css: 'type-LC'  },
+  'CD':  { label: 'Contratación D.', css: 'type-CD'  },
+};
+
+function switchTab(tab) {
+  document.getElementById('panel-lista').style.display = tab === 'lista' ? '' : 'none';
+  document.getElementById('panel-estrategia').style.display = tab === 'estrategia' ? '' : 'none';
+  document.getElementById('tab-lista').classList.toggle('active', tab === 'lista');
+  document.getElementById('tab-estrategia').classList.toggle('active', tab === 'estrategia');
+}
+
+function quickSearch(keyword) {
+  document.getElementById('input-keyword').value = keyword;
+  document.querySelectorAll('.keyword-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  buscar(1);
+}
+
+function diasRestantes(fechaStr) {
+  if (!fechaStr) return null;
+  const hoy = new Date();
+  const fecha = new Date(fechaStr);
+  const diff = Math.ceil((fecha - hoy) / (1000 * 60 * 60 * 24));
+  return diff;
+}
+
+function formatMonto(monto) {
+  if (!monto) return '—';
+  return '$' + parseFloat(monto).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function renderDias(dias) {
+  if (dias === null) return '<span class="meta-value">—</span>';
+  if (dias < 0) return `<span class="meta-value danger">Cerrado</span>`;
+  if (dias <= 3) return `<span class="dias-badge dias-urgent">⚠️ ${dias} día${dias !== 1 ? 's' : ''}</span>`;
+  if (dias <= 7) return `<span class="dias-badge dias-warn">⏰ ${dias} días</span>`;
+  return `<span class="dias-badge dias-ok">✅ ${dias} días</span>`;
+}
+
+function renderCard(p) {
+  const tipo = TIPOS[p.tipo] || { label: p.tipo || 'Otro', css: 'type-other' };
+  const dias = diasRestantes(p.fecha_limite_oferta || p.fecha_publicacion_oferta);
+  const url = `https://www.compraspublicas.gob.ec/ProcesoContratacion/compras/EP/informacionProcesoContratacion2.cpe?idSoliCompra=${p.id}`;
+
+  return `
+    <div class="process-card" onclick="window.open('${url}', '_blank')">
+      <div class="process-card-header">
+        <span class="process-type-badge ${tipo.css}">${tipo.label}</span>
+        <span class="process-title">${p.nombre || p.descripcion || 'Sin descripción'}</span>
+      </div>
+      <div class="process-meta">
+        <div class="meta-item">
+          <span class="meta-label">Código</span>
+          <span class="meta-value">${p.codigo || '—'}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Presupuesto</span>
+          <span class="meta-value highlight">${formatMonto(p.presupuesto_referencial)}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Cierre oferta</span>
+          <div>${renderDias(dias)}</div>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Provincia</span>
+          <span class="meta-value">${p.provincia || '—'}</span>
+        </div>
+      </div>
+      <div class="process-footer">
+        <span class="entidad-name">🏛️ ${p.nombre_entidad || p.entidad || '—'}</span>
+        <a class="btn-ver" href="${url}" target="_blank" onclick="event.stopPropagation()">Ver proceso →</a>
+      </div>
+    </div>
+  `;
+}
+
+function updateStats(data) {
+  const total = data.total_items || data.length || 0;
+  const items = data.items || data || [];
+  const sie = items.filter(p => p.tipo === 'SIE').length;
+  const mc = items.filter(p => p.tipo === 'MC').length;
+  const urgent = items.filter(p => {
+    const d = diasRestantes(p.fecha_limite_oferta || p.fecha_publicacion_oferta);
+    return d !== null && d >= 0 && d <= 7;
+  }).length;
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-sie').textContent = sie;
+  document.getElementById('stat-mc').textContent = mc;
+  document.getElementById('stat-urgent').textContent = urgent;
+}
+
+function renderPagination(page, pages) {
+  const el = document.getElementById('pagination');
+  if (pages <= 1) { el.innerHTML = ''; return; }
+  let html = '';
+  html += `<button class="page-btn" onclick="buscar(${page-1})" ${page<=1?'disabled':''}>← Anterior</button>`;
+  for (let i = Math.max(1, page-2); i <= Math.min(pages, page+2); i++) {
+    html += `<button class="page-btn ${i===page?'active':''}" onclick="buscar(${i})">${i}</button>`;
+  }
+  html += `<button class="page-btn" onclick="buscar(${page+1})" ${page>=pages?'disabled':''}>Siguiente →</button>`;
+  el.innerHTML = html;
+}
+
+async function buscar(page = 1) {
+  const keyword = document.getElementById('input-keyword').value.trim() || 'extintores';
+  const tipo = document.getElementById('input-tipo').value;
+  const estado = document.getElementById('input-estado').value;
+
+  document.getElementById('btn-buscar').disabled = true;
+  document.getElementById('results-container').innerHTML = `
+    <div class="loading"><div class="spinner"></div><p>Consultando SERCOP...</p></div>`;
+  document.getElementById('pagination').innerHTML = '';
+  document.getElementById('results-title').textContent = `Buscando: "${keyword}"`;
+  document.getElementById('results-count').textContent = '';
+
+  const params = new URLSearchParams({
+    q: keyword,
+    page: page,
+    per_page: 20,
+  });
+  if (tipo) params.append('tipo_proceso', tipo);
+  if (estado) params.append('estado', estado);
+
+  try {
+    const res = await fetch(`${API_BASE}/search?${params}`);
+
+    if (!res.ok) {
+      throw new Error(`HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    const items = data.items || data.results || data || [];
+    const total = data.total_items || data.total || items.length;
+    const pages = data.total_pages || Math.ceil(total / 20) || 1;
+
+    currentPage = page;
+    totalPages = pages;
+
+    updateStats({ total_items: total, items });
+
+    document.getElementById('results-title').textContent = `Resultados para: "${keyword}"`;
+    document.getElementById('results-count').textContent = `${total} proceso${total !== 1 ? 's' : ''} encontrado${total !== 1 ? 's' : ''}`;
+
+    if (items.length === 0) {
+      document.getElementById('results-container').innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">📭</div>
+          <p>No se encontraron procesos para "${keyword}"</p>
+          <p style="margin-top:8px; font-size:13px;">Intenta con otras palabras clave</p>
+        </div>`;
+    } else {
+      document.getElementById('results-container').innerHTML = items.map(renderCard).join('');
+      renderPagination(page, pages);
+    }
+
+  } catch (err) {
+    console.error(err);
+    document.getElementById('results-container').innerHTML = `
+      <div class="error-box">
+        <p style="font-size:20px; margin-bottom:8px;">⚠️ No se pudo conectar a SERCOP</p>
+        <p style="font-size:13px; margin-bottom:16px;">Error: ${err.message}</p>
+        <p style="font-size:13px; color:#fca5a5;">
+          Posibles causas:<br>
+          • El servidor de SERCOP está temporalmente fuera de servicio<br>
+          • Hay un problema de conexión a internet<br>
+          • SERCOP bloqueó la petición (intenta desde otro navegador o red)
+        </p>
+        <div style="margin-top:16px;">
+          <a href="https://www.compraspublicas.gob.ec/ProcesoContratacion/compras/EP/buscarProceso.cpe?sg=EP"
+             target="_blank" class="btn btn-primary" style="display:inline-block; text-decoration:none; padding:10px 20px; border-radius:8px;">
+            🔗 Ir a SERCOP directamente
+          </a>
+        </div>
+      </div>`;
+  } finally {
+    document.getElementById('btn-buscar').disabled = false;
+  }
+}
+
+// Al cargar, buscar automáticamente
+window.addEventListener('load', () => {
+  buscar(1);
+});
+
+// Enter para buscar
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('input-keyword').addEventListener('keydown', e => {
+    if (e.key === 'Enter') buscar(1);
+  });
+});
+</script>
+
+</body>
+</html>
