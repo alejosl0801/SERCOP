@@ -485,7 +485,7 @@
       <div class="stat-value yellow" id="stat-mc">—</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Cierre en ≤7 días</div>
+      <div class="stat-label">Sin proveedor único</div>
       <div class="stat-value red" id="stat-urgent">—</div>
     </div>
   </div>
@@ -664,11 +664,12 @@
 </div>
 
 <script>
-const API_BASE = 'https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/api/v1';
+// API correcta de SERCOP - Contrataciones Abiertas Ecuador OCDS
+const API_BASE = 'https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/api/search_ocds';
+const AÑO_ACTUAL = new Date().getFullYear();
 
 let currentPage = 1;
 let totalPages = 1;
-let allResults = [];
 
 const TIPOS = {
   'SIE': { label: 'Subasta Inversa', css: 'type-SIE' },
@@ -676,6 +677,8 @@ const TIPOS = {
   'IC':  { label: 'Ínfima Cuantía',  css: 'type-IC'  },
   'LC':  { label: 'Licitación',      css: 'type-LC'  },
   'CD':  { label: 'Contratación D.', css: 'type-CD'  },
+  'RE':  { label: 'Régimen Especial',css: 'type-other'},
+  'LO':  { label: 'Licitación Obra', css: 'type-LC'  },
 };
 
 function switchTab(tab) {
@@ -692,78 +695,78 @@ function quickSearch(keyword) {
   buscar(1);
 }
 
-function diasRestantes(fechaStr) {
-  if (!fechaStr) return null;
-  const hoy = new Date();
-  const fecha = new Date(fechaStr);
-  const diff = Math.ceil((fecha - hoy) / (1000 * 60 * 60 * 24));
-  return diff;
-}
-
 function formatMonto(monto) {
   if (!monto) return '—';
   return '$' + parseFloat(monto).toLocaleString('es-EC', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
-function renderDias(dias) {
-  if (dias === null) return '<span class="meta-value">—</span>';
-  if (dias < 0) return `<span class="meta-value danger">Cerrado</span>`;
-  if (dias <= 3) return `<span class="dias-badge dias-urgent">⚠️ ${dias} día${dias !== 1 ? 's' : ''}</span>`;
-  if (dias <= 7) return `<span class="dias-badge dias-warn">⏰ ${dias} días</span>`;
-  return `<span class="dias-badge dias-ok">✅ ${dias} días</span>`;
+function getTipoFromOcds(item) {
+  // El campo internal_type viene en la respuesta OCDS
+  const t = (item.internal_type || item.tipo || '').toUpperCase();
+  if (t.includes('SUBASTA') || t === 'SIE') return 'SIE';
+  if (t.includes('MENOR') || t === 'MC') return 'MC';
+  if (t.includes('INFIMA') || t.includes('ÍNFIMA') || t === 'IC') return 'IC';
+  if (t.includes('LICITACION') || t.includes('LICITACIÓN') || t === 'LC') return 'LC';
+  if (t.includes('DIRECTA') || t === 'CD') return 'CD';
+  return t || 'OTRO';
 }
 
 function renderCard(p) {
-  const tipo = TIPOS[p.tipo] || { label: p.tipo || 'Otro', css: 'type-other' };
-  const dias = diasRestantes(p.fecha_limite_oferta || p.fecha_publicacion_oferta);
-  const url = `https://www.compraspublicas.gob.ec/ProcesoContratacion/compras/EP/informacionProcesoContratacion2.cpe?idSoliCompra=${p.id}`;
+  const tipoKey = getTipoFromOcds(p);
+  const tipo = TIPOS[tipoKey] || { label: p.internal_type || 'Otro', css: 'type-other' };
+  // ocid es el identificador del proceso en OCDS, ej: ocds-03ad3f-XXXXXXXX
+  const ocid = p.ocid || '';
+  const codigoUrl = ocid.replace('ocds-03ad3f-', '');
+  const url = codigoUrl
+    ? `https://www.compraspublicas.gob.ec/ProcesoContratacion/compras/EP/informacionProcesoContratacion2.cpe?idSoliCompra=${codigoUrl}`
+    : `https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/procedimientos/${ocid}`;
+
+  const titulo = p.title || p.description || p.descripcion || 'Sin descripción';
+  const entidad = p.buyerName || p.nombre_entidad || '—';
+  const fecha = p.date ? new Date(p.date).toLocaleDateString('es-EC') : '—';
+  const anio = p.year || '—';
 
   return `
     <div class="process-card" onclick="window.open('${url}', '_blank')">
       <div class="process-card-header">
         <span class="process-type-badge ${tipo.css}">${tipo.label}</span>
-        <span class="process-title">${p.nombre || p.descripcion || 'Sin descripción'}</span>
+        <span class="process-title">${titulo}</span>
       </div>
       <div class="process-meta">
         <div class="meta-item">
           <span class="meta-label">Código</span>
-          <span class="meta-value">${p.codigo || '—'}</span>
+          <span class="meta-value">${codigoUrl || ocid || '—'}</span>
         </div>
         <div class="meta-item">
-          <span class="meta-label">Presupuesto</span>
-          <span class="meta-value highlight">${formatMonto(p.presupuesto_referencial)}</span>
+          <span class="meta-label">Año</span>
+          <span class="meta-value">${anio}</span>
         </div>
         <div class="meta-item">
-          <span class="meta-label">Cierre oferta</span>
-          <div>${renderDias(dias)}</div>
+          <span class="meta-label">Fecha</span>
+          <span class="meta-value">${fecha}</span>
         </div>
         <div class="meta-item">
-          <span class="meta-label">Provincia</span>
-          <span class="meta-value">${p.provincia || '—'}</span>
+          <span class="meta-label">Proveedor único</span>
+          <span class="meta-value ${p.single_provider ? 'danger' : 'highlight'}">${p.single_provider ? 'Sí (cerrado)' : 'No ✅'}</span>
         </div>
       </div>
       <div class="process-footer">
-        <span class="entidad-name">🏛️ ${p.nombre_entidad || p.entidad || '—'}</span>
+        <span class="entidad-name">🏛️ ${entidad}</span>
         <a class="btn-ver" href="${url}" target="_blank" onclick="event.stopPropagation()">Ver proceso →</a>
       </div>
     </div>
   `;
 }
 
-function updateStats(data) {
-  const total = data.total_items || data.length || 0;
-  const items = data.items || data || [];
-  const sie = items.filter(p => p.tipo === 'SIE').length;
-  const mc = items.filter(p => p.tipo === 'MC').length;
-  const urgent = items.filter(p => {
-    const d = diasRestantes(p.fecha_limite_oferta || p.fecha_publicacion_oferta);
-    return d !== null && d >= 0 && d <= 7;
-  }).length;
+function updateStats(total, items) {
+  const sie = items.filter(p => getTipoFromOcds(p) === 'SIE').length;
+  const mc  = items.filter(p => getTipoFromOcds(p) === 'MC').length;
+  const noUnico = items.filter(p => !p.single_provider).length;
 
   document.getElementById('stat-total').textContent = total;
   document.getElementById('stat-sie').textContent = sie;
   document.getElementById('stat-mc').textContent = mc;
-  document.getElementById('stat-urgent').textContent = urgent;
+  document.getElementById('stat-urgent').textContent = noUnico;
 }
 
 function renderPagination(page, pages) {
@@ -780,7 +783,6 @@ function renderPagination(page, pages) {
 
 async function buscar(page = 1) {
   const keyword = document.getElementById('input-keyword').value.trim() || 'extintores';
-  const tipo = document.getElementById('input-tipo').value;
   const estado = document.getElementById('input-estado').value;
 
   document.getElementById('btn-buscar').disabled = true;
@@ -790,44 +792,60 @@ async function buscar(page = 1) {
   document.getElementById('results-title').textContent = `Buscando: "${keyword}"`;
   document.getElementById('results-count').textContent = '';
 
-  const params = new URLSearchParams({
-    q: keyword,
-    page: page,
-    per_page: 20,
-  });
-  if (tipo) params.append('tipo_proceso', tipo);
-  if (estado) params.append('estado', estado);
+  // Buscar en el año actual y el anterior para más resultados
+  const aniosBuscar = [AÑO_ACTUAL, AÑO_ACTUAL - 1];
+  let todosItems = [];
+  let totalGlobal = 0;
+  let pagesGlobal = 1;
 
   try {
-    const res = await fetch(`${API_BASE}/search?${params}`);
+    // Buscar en año actual primero
+    const params = new URLSearchParams({
+      year: AÑO_ACTUAL,
+      search: keyword,
+      page: page,
+    });
 
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status}`);
-    }
+    const res = await fetch(`${API_BASE}?${params}`);
+
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
 
     const data = await res.json();
-    const items = data.items || data.results || data || [];
-    const total = data.total_items || data.total || items.length;
-    const pages = data.total_pages || Math.ceil(total / 20) || 1;
+    // La respuesta tiene: total, page, pages, data (array)
+    todosItems = data.data || data.results || [];
+    totalGlobal = data.total || todosItems.length;
+    pagesGlobal = data.pages || Math.ceil(totalGlobal / 20) || 1;
+
+    // Si hay pocos resultados en año actual, también buscar año anterior
+    if (todosItems.length < 5 && page === 1) {
+      const params2 = new URLSearchParams({ year: AÑO_ACTUAL - 1, search: keyword, page: 1 });
+      const res2 = await fetch(`${API_BASE}?${params2}`);
+      if (res2.ok) {
+        const data2 = await res2.json();
+        const items2 = data2.data || data2.results || [];
+        todosItems = [...todosItems, ...items2];
+        totalGlobal += (data2.total || 0);
+      }
+    }
 
     currentPage = page;
-    totalPages = pages;
+    totalPages = pagesGlobal;
 
-    updateStats({ total_items: total, items });
+    updateStats(totalGlobal, todosItems);
 
     document.getElementById('results-title').textContent = `Resultados para: "${keyword}"`;
-    document.getElementById('results-count').textContent = `${total} proceso${total !== 1 ? 's' : ''} encontrado${total !== 1 ? 's' : ''}`;
+    document.getElementById('results-count').textContent = `${totalGlobal} proceso${totalGlobal !== 1 ? 's' : ''} encontrado${totalGlobal !== 1 ? 's' : ''}`;
 
-    if (items.length === 0) {
+    if (todosItems.length === 0) {
       document.getElementById('results-container').innerHTML = `
         <div class="empty">
           <div class="empty-icon">📭</div>
-          <p>No se encontraron procesos para "${keyword}"</p>
-          <p style="margin-top:8px; font-size:13px;">Intenta con otras palabras clave</p>
+          <p>No se encontraron procesos para "<strong>${keyword}</strong>"</p>
+          <p style="margin-top:8px; font-size:13px; color:#64748b;">Intenta con otras palabras clave como "recarga extintores" o "proteccion incendios"</p>
         </div>`;
     } else {
-      document.getElementById('results-container').innerHTML = items.map(renderCard).join('');
-      renderPagination(page, pages);
+      document.getElementById('results-container').innerHTML = todosItems.map(renderCard).join('');
+      renderPagination(page, pagesGlobal);
     }
 
   } catch (err) {
@@ -837,14 +855,13 @@ async function buscar(page = 1) {
         <p style="font-size:20px; margin-bottom:8px;">⚠️ No se pudo conectar a SERCOP</p>
         <p style="font-size:13px; margin-bottom:16px;">Error: ${err.message}</p>
         <p style="font-size:13px; color:#fca5a5;">
-          Posibles causas:<br>
-          • El servidor de SERCOP está temporalmente fuera de servicio<br>
-          • Hay un problema de conexión a internet<br>
-          • SERCOP bloqueó la petición (intenta desde otro navegador o red)
+          El servidor de SERCOP puede estar temporalmente fuera de servicio.<br>
+          Intenta de nuevo en unos minutos.
         </p>
-        <div style="margin-top:16px;">
+        <div style="margin-top:16px; display:flex; gap:12px; justify-content:center; flex-wrap:wrap;">
+          <button onclick="buscar(1)" class="btn btn-primary">🔄 Reintentar</button>
           <a href="https://www.compraspublicas.gob.ec/ProcesoContratacion/compras/EP/buscarProceso.cpe?sg=EP"
-             target="_blank" class="btn btn-primary" style="display:inline-block; text-decoration:none; padding:10px 20px; border-radius:8px;">
+             target="_blank" class="btn btn-secondary" style="text-decoration:none; display:inline-flex; align-items:center;">
             🔗 Ir a SERCOP directamente
           </a>
         </div>
@@ -854,12 +871,8 @@ async function buscar(page = 1) {
   }
 }
 
-// Al cargar, buscar automáticamente
-window.addEventListener('load', () => {
-  buscar(1);
-});
+window.addEventListener('load', () => buscar(1));
 
-// Enter para buscar
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('input-keyword').addEventListener('keydown', e => {
     if (e.key === 'Enter') buscar(1);
