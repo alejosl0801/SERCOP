@@ -47,23 +47,40 @@
 <div class="page">
 
   <div class="logo-area">
-    <svg width="72" height="72" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;margin-right:10px;border-radius:8px;">
-      <rect width="72" height="72" rx="7" ry="7" fill="#000"/>
-      <rect x="2" y="2" width="68" height="68" rx="6" ry="6" fill="none" stroke="#ccc" stroke-width="2.5"/>
-      <!-- casco -->
-      <ellipse cx="36" cy="19" rx="14" ry="11" fill="#f0b800"/>
-      <rect x="22" y="16" width="28" height="5" rx="2" fill="#f0b800"/>
-      <rect x="30" y="8" width="12" height="7" rx="2" fill="#f0b800"/>
-      <rect x="33" y="6" width="6" height="4" rx="1" fill="#f0b800"/>
+    <svg width="80" height="80" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;margin-right:10px;">
+      <defs>
+        <linearGradient id="border" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#e8e8e8"/>
+          <stop offset="50%" style="stop-color:#ffffff"/>
+          <stop offset="100%" style="stop-color:#aaaaaa"/>
+        </linearGradient>
+      </defs>
+      <!-- borde plateado -->
+      <rect width="100" height="100" rx="12" ry="12" fill="url(#border)"/>
+      <!-- fondo negro -->
+      <rect x="5" y="5" width="90" height="90" rx="9" ry="9" fill="#000"/>
+      <!-- tab superior del casco -->
+      <rect x="43" y="8" width="14" height="8" rx="2" fill="#f5b800"/>
+      <!-- domo del casco -->
+      <path d="M22 38 Q22 14 50 14 Q78 14 78 38 Z" fill="#f5b800"/>
       <!-- ala del casco -->
-      <ellipse cx="36" cy="27" rx="18" ry="4" fill="#f0b800"/>
-      <!-- máscara -->
-      <rect x="29" y="27" width="14" height="13" rx="3" fill="#000"/>
-      <circle cx="36" cy="33" r="5" fill="#000" stroke="#f0b800" stroke-width="2"/>
-      <rect x="33" y="38" width="6" height="3" rx="1" fill="#f0b800"/>
-      <!-- cuerpo -->
-      <path d="M20 42 Q22 36 29 34 L43 34 Q50 36 52 42 L54 58 L18 58 Z" fill="#f0b800"/>
-      <rect x="29" y="40" width="14" height="3" rx="1" fill="#000"/>
+      <ellipse cx="50" cy="38" rx="30" ry="6" fill="#f5b800"/>
+      <!-- zona oscura de máscara / visor -->
+      <path d="M34 38 L34 54 Q34 58 38 58 L62 58 Q66 58 66 54 L66 38 Z" fill="#000"/>
+      <!-- cuerpo del filtro respirador (amarillo) -->
+      <path d="M34 44 Q34 58 38 60 L62 60 Q66 58 66 44 Z" fill="#f5b800"/>
+      <!-- círculo del filtro (negro con borde amarillo) -->
+      <circle cx="50" cy="50" r="10" fill="#000" stroke="#f5b800" stroke-width="3"/>
+      <!-- conector inferior del filtro -->
+      <rect x="43" y="60" width="14" height="5" rx="2" fill="#f5b800"/>
+      <!-- cuerpo / hombros -->
+      <path d="M10 95 L14 68 Q20 62 34 62 L34 65 L66 65 L66 62 Q80 62 86 68 L90 95 Z" fill="#f5b800"/>
+      <!-- hueco izquierdo brazo -->
+      <path d="M14 68 Q20 62 34 62 L34 65 L22 68 Z" fill="#000"/>
+      <!-- hueco derecho brazo -->
+      <path d="M86 68 Q80 62 66 62 L66 65 L78 68 Z" fill="#000"/>
+      <!-- hebilla pecho -->
+      <rect x="42" y="70" width="16" height="5" rx="2" fill="#000"/>
     </svg>
     PREVIFUEGO
   </div>
@@ -286,19 +303,27 @@
 <div class="page" style="margin-top: 20px; border-top: 3px solid #2c3e50; padding-top: 20px;">
 
   <div class="logo-area" style="margin-bottom:16px;">
-    <svg width="60" height="60" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;margin-right:10px;border-radius:8px;">
-      <rect width="72" height="72" rx="7" ry="7" fill="#000"/>
-      <rect x="2" y="2" width="68" height="68" rx="6" ry="6" fill="none" stroke="#ccc" stroke-width="2.5"/>
-      <ellipse cx="36" cy="19" rx="14" ry="11" fill="#f0b800"/>
-      <rect x="22" y="16" width="28" height="5" rx="2" fill="#f0b800"/>
-      <rect x="30" y="8" width="12" height="7" rx="2" fill="#f0b800"/>
-      <rect x="33" y="6" width="6" height="4" rx="1" fill="#f0b800"/>
-      <ellipse cx="36" cy="27" rx="18" ry="4" fill="#f0b800"/>
-      <rect x="29" y="27" width="14" height="13" rx="3" fill="#000"/>
-      <circle cx="36" cy="33" r="5" fill="#000" stroke="#f0b800" stroke-width="2"/>
-      <rect x="33" y="38" width="6" height="3" rx="1" fill="#f0b800"/>
-      <path d="M20 42 Q22 36 29 34 L43 34 Q50 36 52 42 L54 58 L18 58 Z" fill="#f0b800"/>
-      <rect x="29" y="40" width="14" height="3" rx="1" fill="#000"/>
+    <svg width="70" height="70" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style="vertical-align:middle;margin-right:10px;">
+      <defs>
+        <linearGradient id="border2" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" style="stop-color:#e8e8e8"/>
+          <stop offset="50%" style="stop-color:#ffffff"/>
+          <stop offset="100%" style="stop-color:#aaaaaa"/>
+        </linearGradient>
+      </defs>
+      <rect width="100" height="100" rx="12" ry="12" fill="url(#border2)"/>
+      <rect x="5" y="5" width="90" height="90" rx="9" ry="9" fill="#000"/>
+      <rect x="43" y="8" width="14" height="8" rx="2" fill="#f5b800"/>
+      <path d="M22 38 Q22 14 50 14 Q78 14 78 38 Z" fill="#f5b800"/>
+      <ellipse cx="50" cy="38" rx="30" ry="6" fill="#f5b800"/>
+      <path d="M34 38 L34 54 Q34 58 38 58 L62 58 Q66 58 66 54 L66 38 Z" fill="#000"/>
+      <path d="M34 44 Q34 58 38 60 L62 60 Q66 58 66 44 Z" fill="#f5b800"/>
+      <circle cx="50" cy="50" r="10" fill="#000" stroke="#f5b800" stroke-width="3"/>
+      <rect x="43" y="60" width="14" height="5" rx="2" fill="#f5b800"/>
+      <path d="M10 95 L14 68 Q20 62 34 62 L34 65 L66 65 L66 62 Q80 62 86 68 L90 95 Z" fill="#f5b800"/>
+      <path d="M14 68 Q20 62 34 62 L34 65 L22 68 Z" fill="#000"/>
+      <path d="M86 68 Q80 62 66 62 L66 65 L78 68 Z" fill="#000"/>
+      <rect x="42" y="70" width="16" height="5" rx="2" fill="#000"/>
     </svg>
     PREVIFUEGO
   </div>
