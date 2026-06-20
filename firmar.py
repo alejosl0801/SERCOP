@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """
-Convierte el HTML de la proforma a PDF y lo firma digitalmente con el certificado .p12.
-Uso: python3 firmar.py
+Convierte HTML a PDF y lo firma con sello QR estilo FirmaEC.
+Uso: P12_PASS=<clave> python3 firmar.py
 """
-import sys
 import os
-from pathlib import Path
+from weasyprint import HTML as WP_HTML
+from pyhanko.sign import signers, fields
+from pyhanko.sign.fields import SigFieldSpec
+from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
+from pyhanko.sign.signers.pdf_signer import PdfSignatureMetadata
+from pyhanko.stamp import QRStampStyle
 
 P12_PATH = "/root/.claude/uploads/62158717-1a5c-565b-9ca5-eaa58166a747/73c7eb7f-14775814_identity_0952773976.p12"
 P12_PASS = os.environ.get("P12_PASS", "").encode()
@@ -14,23 +18,33 @@ PDF_UNSIGNED = "/home/user/SERCOP/proforma_NIC-0998610151001-2026-00028_unsigned
 PDF_SIGNED   = "/home/user/SERCOP/Proforma — NIC-0998610151001-2026-00028 — PREVIFUEGO-signed.pdf"
 
 # 1. HTML → PDF
-print("Convirtiendo HTML a PDF...")
-from weasyprint import HTML
-HTML(filename=HTML_FILE).write_pdf(PDF_UNSIGNED)
-print(f"  PDF generado: {PDF_UNSIGNED}")
+print("1. Convirtiendo HTML a PDF...")
+WP_HTML(filename=HTML_FILE).write_pdf(PDF_UNSIGNED)
+print(f"   OK")
 
-# 2. Firmar con pyhanko
-print("Firmando PDF con certificado .p12...")
-from pyhanko.sign import signers, fields
-from pyhanko.sign.fields import SigFieldSpec
-from pyhanko import stamp
-from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
-from pyhanko.sign.signers.pdf_signer import PdfSignatureMetadata
+# 2. Firmar con QR estilo FirmaEC
+print("2. Firmando con sello QR...")
 
 signer = signers.SimpleSigner.load_pkcs12(
     pfx_file=P12_PATH,
     passphrase=P12_PASS
 )
+
+style = QRStampStyle(
+    stamp_text=(
+        "Validar únicamente en FirmaEC.\n"
+        "Firmado electrónicamente por:\n"
+        "ALEJANDRO ALBERTO LOPEZ MEJIA\n"
+        "Fecha: %(ts)s UTC"
+    ),
+    background_opacity=1,
+)
+
+# Página 3 (índice 2) = carta anti-lavado
+# Coordenadas en puntos PDF (origen abajo-izquierda, A4 = 595x842)
+# Caja de firma en la carta: lado izquierdo, 60% ancho = ~357pts
+# Posición vertical: parte inferior de la página, sobre el margen
+STAMP_BOX = (42, 195, 399, 320)  # x1, y1, x2, y2
 
 with open(PDF_UNSIGNED, "rb") as inf:
     writer = IncrementalPdfFileWriter(inf)
@@ -38,8 +52,8 @@ with open(PDF_UNSIGNED, "rb") as inf:
         writer,
         SigFieldSpec(
             sig_field_name="Firma",
-            on_page=1,          # página 2 (0-indexed) = carta anti-lavado
-            box=(70, 80, 370, 180)
+            on_page=2,
+            box=STAMP_BOX
         )
     )
     meta = PdfSignatureMetadata(
@@ -48,8 +62,17 @@ with open(PDF_UNSIGNED, "rb") as inf:
         location="Guayaquil, Ecuador",
         name="Alejandro Alberto López Mejía"
     )
+    pdf_signer = signers.PdfSigner(
+        signature_meta=meta,
+        signer=signer,
+        stamp_style=style,
+    )
     with open(PDF_SIGNED, "wb") as outf:
-        signers.sign_pdf(writer, meta, signer=signer, output=outf)
+        pdf_signer.sign_pdf(
+            writer,
+            appearance_text_params={"url": "https://www.firmadigital.gob.ec"},
+            output=outf
+        )
 
-print(f"  PDF firmado: {PDF_SIGNED}")
+print(f"   OK: {PDF_SIGNED}")
 print("Listo.")
