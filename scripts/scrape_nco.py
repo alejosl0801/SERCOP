@@ -60,6 +60,27 @@ def scrape_with_playwright():
         # Esperar que cargue la tabla
         page.wait_for_timeout(3000)
 
+        # Cambiar paginación a 100 entradas para ver todas las filas
+        try:
+            length_select = page.locator("select[name*='DataTables'], select[name$='_length']").first
+            if length_select.count() > 0:
+                length_select.select_option("100")
+                page.wait_for_timeout(2000)
+                print("Paginación cambiada a 100 entradas", file=sys.stderr)
+            else:
+                # Intentar click en el select de DataTables por índice
+                selects = page.locator("select").all()
+                for sel in selects:
+                    opts = sel.locator("option").all()
+                    vals = [o.get_attribute("value") for o in opts]
+                    if "100" in vals or "-1" in vals:
+                        sel.select_option("100" if "100" in vals else "-1")
+                        page.wait_for_timeout(2000)
+                        print("Paginación encontrada por opciones", file=sys.stderr)
+                        break
+        except Exception as e:
+            print(f"No se pudo cambiar paginación: {e}", file=sys.stderr)
+
         # Extraer todas las filas de la tabla
         print("Extrayendo filas...", file=sys.stderr)
         rows = page.locator("table tbody tr").all()
@@ -68,12 +89,9 @@ def scrape_with_playwright():
         for i, row in enumerate(rows):
             cells = row.locator("td").all()
             if len(cells) < 6:
-                print(f"Fila {i}: solo {len(cells)} celdas, omitida", file=sys.stderr)
                 continue
 
             texts = [c.inner_text().strip() for c in cells]
-            if i < 5:
-                print(f"Fila {i} ({len(texts)} cols): {texts[:8]}", file=sys.stderr)
             tipo          = texts[0] if len(texts) > 0 else ""
             codigo        = texts[1] if len(texts) > 1 else ""
             fecha_pub     = texts[2] if len(texts) > 2 else ""
@@ -84,7 +102,6 @@ def scrape_with_playwright():
             entidad       = texts[7] if len(texts) > 7 else ""
 
             if not is_guayas(prov_canton) and not is_guayas(entidad):
-                print(f"  -> No Guayas: prov={prov_canton!r} entidad={entidad!r}", file=sys.stderr)
                 continue
             if not is_extintor(descripcion):
                 continue
