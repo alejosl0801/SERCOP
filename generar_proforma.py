@@ -131,8 +131,9 @@ def calcular_precio(item: dict) -> ResultadoMatch:
         tarifa_key = f"recarga_{agente}"
         tarifa     = TARIFAS_LB.get(tarifa_key, 0.70)
         precio     = round(tarifa * lbs, 2)
-        desc_clean = f"Recarga de extintor {agente} {int(lbs) if lbs == int(lbs) else lbs} lbs"
-        notas      = f"Tarifa: ${tarifa}/lb × {int(lbs) if lbs==int(lbs) else lbs} lbs"
+        lbs_disp   = int(lbs) if lbs == int(lbs) else lbs
+        desc_clean = f"Recarga de extintor {agente} {lbs_disp} lbs"
+        notas      = f"Tarifa: ${tarifa}/lb × {lbs_disp} lbs"
         if agente == "CO2":
             notas += " | Sin manómetro — agente CO2"
         return ResultadoMatch(desc_clean, "Unidad", cantidad, precio, notas, True)
@@ -249,7 +250,7 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
             sub_str    = '<span style="color:red;">—</span>'
             nota_html  = f'<br><small style="color:#c00;">{f.notas}</small>'
 
-        cant_disp = int(f.cantidad) if f.cantidad == int(f.cantidad) else f.cantidad
+        cant_disp = int(f.cantidad) if f.cantidad == int(f.cantidad) else round(f.cantidad, 4)
         rows_html += f"""
         <tr>
           <td style="text-align:center;">{i}</td>
@@ -510,8 +511,9 @@ def firmar_pdf(pdf_unsigned: Path, pdf_signed: Path):
         r = max(valid, key=lambda r: r.y0)
         return (r.x0, h - r.y1, r.x1, h - r.y0)
 
+    has_carta = n >= 3  # tercera página existe (carta anti-lavado)
     box_p2 = firma_box(1, (38, 480, 300, 590))
-    box_p3 = firma_box(2, (34, 280, 360, 390))
+    box_p3 = firma_box(2, (34, 280, 360, 390)) if has_carta else None
     doc.close()
 
     signer_obj = signers.SimpleSigner.load_pkcs12(pfx_file=P12_PATH, passphrase=P12_PASS)
@@ -520,7 +522,8 @@ def firmar_pdf(pdf_unsigned: Path, pdf_signed: Path):
     with open(pdf_unsigned, "rb") as inf:
         w = IncrementalPdfFileWriter(inf)
         fields.append_signature_field(w, SigFieldSpec("Firma1", on_page=1, box=box_p2))
-        fields.append_signature_field(w, SigFieldSpec("Firma2", on_page=2, box=box_p3))
+        if has_carta and box_p3:
+            fields.append_signature_field(w, SigFieldSpec("Firma2", on_page=2, box=box_p3))
         meta1 = PdfSignatureMetadata(
             field_name="Firma1",
             reason="Firma electrónica del proveedor PREVIFUEGO",
@@ -533,19 +536,23 @@ def firmar_pdf(pdf_unsigned: Path, pdf_signed: Path):
         with open(pdf_pass1, "wb") as outf:
             ps1.sign_pdf(w, appearance_text_params={"url": "https://www.firmadigital.gob.ec"}, output=outf)
 
-    with open(pdf_pass1, "rb") as inf:
-        w2 = IncrementalPdfFileWriter(inf)
-        meta2 = PdfSignatureMetadata(
-            field_name="Firma2",
-            reason="Firma electrónica del proveedor PREVIFUEGO",
-            location="Guayaquil, Ecuador",
-            name=PROVEEDOR["representante"],
-        )
-        ps2 = signers.PdfSigner(signature_meta=meta2, signer=signer_obj, stamp_style=STYLE)
-        with open(pdf_signed, "wb") as outf:
-            ps2.sign_pdf(w2, appearance_text_params={"url": "https://www.firmadigital.gob.ec"}, output=outf)
+    if has_carta and box_p3:
+        with open(pdf_pass1, "rb") as inf:
+            w2 = IncrementalPdfFileWriter(inf)
+            meta2 = PdfSignatureMetadata(
+                field_name="Firma2",
+                reason="Firma electrónica del proveedor PREVIFUEGO",
+                location="Guayaquil, Ecuador",
+                name=PROVEEDOR["representante"],
+            )
+            ps2 = signers.PdfSigner(signature_meta=meta2, signer=signer_obj, stamp_style=STYLE)
+            with open(pdf_signed, "wb") as outf:
+                ps2.sign_pdf(w2, appearance_text_params={"url": "https://www.firmadigital.gob.ec"}, output=outf)
+        pdf_pass1.unlink(missing_ok=True)
+    else:
+        # Solo 2 páginas — renombrar pass1 como firmado final
+        pdf_pass1.rename(pdf_signed)
 
-    pdf_pass1.unlink(missing_ok=True)
     print(f"  ✅ Firmado: {pdf_signed.name}")
 
 # ── Procesar un NCO ───────────────────────────────────────────────────────────
