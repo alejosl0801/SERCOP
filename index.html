@@ -723,6 +723,28 @@ function copiarCodigo(codigo, btn) {
   });
 }
 
+function abrirEnSercop(codigo, urlPortal) {
+  // Copiar código al portapapeles y abrir el portal
+  navigator.clipboard.writeText(codigo).then(() => {
+    mostrarToast('✅ Código copiado — pégalo en "Código del Proceso" y presiona Buscar');
+  }).catch(() => {});
+  window.open(urlPortal, '_blank');
+}
+
+function mostrarToast(msg) {
+  let t = document.getElementById('toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'toast';
+    t.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#16a34a;color:white;padding:14px 24px;border-radius:10px;font-size:14px;font-weight:600;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.4);max-width:90vw;text-align:center;transition:opacity 0.3s';
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.opacity = '1';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.style.opacity = '0', 4000);
+}
+
 function renderCard(p) {
   const tipoKey = getTipoFromOcds(p);
   const tipo = TIPOS[tipoKey] || { label: p.internal_type || 'Otro', css: 'type-other' };
@@ -778,7 +800,7 @@ function renderCard(p) {
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <button class="btn-ver" onclick="copiarCodigo('${codigo}', this)" style="background:transparent;color:#94a3b8;border-color:#475569">📋 Copiar código</button>
           <a class="btn-ver" href="${urlDatos}" target="_blank" style="background:transparent;color:#38bdf8;border-color:#38bdf8">Datos OCDS</a>
-          <a class="btn-ver" href="${urlPortal}" target="_blank" style="background:#ef4444;color:white;border-color:#ef4444">${esCorporativo ? '🏢 Portal Corp.' : '🔗 Ver en SERCOP'} →</a>
+          <button class="btn-ver" onclick="abrirEnSercop('${codigo}', '${urlPortal}')" style="background:#ef4444;color:white;border-color:#ef4444">${esCorporativo ? '🏢 Abrir en Corp.' : '🔗 Abrir en SERCOP'} →</button>
         </div>
       </div>
     </div>
