@@ -554,6 +554,16 @@
       </select>
     </div>
     <div class="search-group">
+      <label>Publicados en los últimos</label>
+      <select id="input-meses">
+        <option value="2" selected>2 meses</option>
+        <option value="3">3 meses</option>
+        <option value="6">6 meses</option>
+        <option value="12">12 meses</option>
+        <option value="99">Todos</option>
+      </select>
+    </div>
+    <div class="search-group">
       <label>Estado</label>
       <select id="input-estado">
         <option value="1">En proceso (abiertos)</option>
@@ -987,6 +997,16 @@ async function buscar(page = 1) {
       totalGlobal = todosItems.length;
       pagesGlobal = 1;
     }
+
+    // Filtrar por antigüedad — solo procesos recientes
+    const mesesFiltro = parseInt(document.getElementById('input-meses').value || '2');
+    const fechaLimite = new Date();
+    fechaLimite.setMonth(fechaLimite.getMonth() - mesesFiltro);
+    todosItems = todosItems.filter(p => {
+      if (!p.date) return true;
+      return new Date(p.date) >= fechaLimite;
+    });
+    totalGlobal = todosItems.length;
 
     // Filtrar por estado (abierto/adjudicado)
     if (estado) {
