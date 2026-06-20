@@ -831,13 +831,6 @@ function copiarCodigo(codigo, btn) {
   });
 }
 
-function abrirEnSercop(codigo, urlPortal) {
-  // Copiar código al portapapeles y abrir el portal
-  navigator.clipboard.writeText(codigo).then(() => {
-    mostrarToast('✅ Código copiado — pégalo en "Código del Proceso" y presiona Buscar');
-  }).catch(() => {});
-  window.open(urlPortal, '_blank');
-}
 
 function mostrarToast(msg) {
   let t = document.getElementById('toast');
@@ -959,8 +952,6 @@ async function buscar(page = 1) {
   document.getElementById('results-title').textContent = `Buscando: "${keyword}"`;
   document.getElementById('results-count').textContent = '';
 
-  // Buscar en el año actual y el anterior para más resultados
-  const aniosBuscar = [AÑO_ACTUAL, AÑO_ACTUAL - 1];
   let todosItems = [];
   let totalGlobal = 0;
   let pagesGlobal = 1;
@@ -1075,8 +1066,6 @@ async function buscar(page = 1) {
 
     document.getElementById('results-title').textContent = `Resultados para: "${keyword}"`;
     document.getElementById('results-count').textContent = `${totalGlobal} proceso${totalGlobal !== 1 ? 's' : ''} encontrado${totalGlobal !== 1 ? 's' : ''}`;
-
-    // Mostrar debug del primer resultado para verificar campos de la API
 
     if (todosItems.length === 0) {
       document.getElementById('results-container').innerHTML = `
@@ -1205,7 +1194,7 @@ async function verificarNuevosEnGuayas() {
       });
     }
     mostrarToast(`🚨 ${nuevos.length} nuevo(s) proceso(s) en Guayas!`);
-    buscar(1);
+    cargarNCO();
   }
 
   const ahora = new Date().toLocaleTimeString('es-EC', {hour:'2-digit', minute:'2-digit'});
@@ -1250,13 +1239,14 @@ async function toggleAlerta() {
 }
 
 // Restaurar alerta si estaba activa
-window.addEventListener('load', () => {
+function _onLoad() {
   const minGuardados = localStorage.getItem(ALERTA_KEY);
   if (minGuardados) setTimeout(() => toggleAlerta(), 2000);
   document.getElementById('input-keyword').addEventListener('keydown', e => {
     if (e.key === 'Enter') buscar(1);
   });
-});
+  cargarNCO();
+}
 
 // ─── TABS ────────────────────────────────────────────────────────────────────
 function mostrarTab(tab) {
@@ -1272,6 +1262,7 @@ function mostrarTab(tab) {
 
 // ─── NCO ─────────────────────────────────────────────────────────────────────
 let ncoData = null;
+const _ncoMap = {};   // índice seguro: id → objeto proceso
 
 async function cargarNCO() {
   const container = document.getElementById('nco-container');
@@ -1296,7 +1287,8 @@ async function cargarNCO() {
       return;
     }
 
-    container.innerHTML = ncoData.procesos.map(renderNCO).join('');
+    ncoData.procesos.forEach((p, i) => { _ncoMap[i] = p; });
+    container.innerHTML = ncoData.procesos.map((p, i) => renderNCO(p, i)).join('');
   } catch (e) {
     actEl.textContent = 'Sin datos aún — el bot actualizará en la próxima hora';
     container.innerHTML = `
@@ -1313,7 +1305,7 @@ async function cargarNCO() {
   }
 }
 
-function renderNCO(p) {
+function renderNCO(p, idx) {
   const ahora = new Date();
   const limite = p.fecha_limite ? new Date(p.fecha_limite) : null;
   const horasRestantes = limite ? Math.round((limite - ahora) / 3600000) : null;
@@ -1376,7 +1368,7 @@ function renderNCO(p) {
       ${p.email ? `<p style="font-size:12px;color:#60a5fa;margin-bottom:8px;">📧 <a href="mailto:${p.email}" style="color:#60a5fa;">${p.email}</a></p>` : ''}
       ${itemsHtml}
       <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
-        ${!expirado ? `<button onclick="abrirProforma(${JSON.stringify(p).replace(/"/g, '&quot;')})"
+        ${!expirado ? `<button onclick="abrirProforma(${idx})"
           style="background:#7c3aed;color:white;border:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">
           📄 Generar proforma
         </button>` : ''}
@@ -1395,7 +1387,9 @@ function renderNCO(p) {
 // ─── PROFORMA ────────────────────────────────────────────────────────────────
 let proformaActual = null;
 
-function abrirProforma(proceso) {
+function abrirProforma(idx) {
+  const proceso = _ncoMap[idx];
+  if (!proceso) return;
   proformaActual = proceso;
   const modal = document.getElementById('modal-proforma');
   const content = document.getElementById('proforma-content');
@@ -1492,7 +1486,7 @@ function copiarProforma() {
       const cant = parseFloat(it.cantidad) || 1;
       const sub = precio * cant;
       total += sub;
-      const desc = it.descripcion.substring(0, 49).padEnd(50);
+      const desc = (it.descripcion || '').substring(0, 49).padEnd(50);
       lineas.push(`${desc} ${String(it.cantidad).padStart(6)} ${('$'+precio.toFixed(2)).padStart(10)} ${('$'+sub.toFixed(2)).padStart(12)}`);
     });
     lineas.push('─'.repeat(82));
@@ -1515,10 +1509,7 @@ function cerrarProforma() {
   proformaActual = null;
 }
 
-// Cargar NCO al inicio (tab por defecto)
-window.addEventListener('load', () => {
-  cargarNCO();
-});
+window.addEventListener('load', _onLoad);
 
 // Al activar la tab SIE, cargar resultados si aún no se ha buscado
 function mostrarTabSIE() {

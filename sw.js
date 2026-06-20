@@ -8,7 +8,13 @@ const VISTOS_KEY = 'nco_vistos';
 self.addEventListener('install', e => {
   self.skipWaiting();
   e.waitUntil(
-    caches.open(CACHE).then(c => c.addAll(['/', '/SERCOP/', '/SERCOP/index.html']))
+    caches.open(CACHE).then(c =>
+      Promise.allSettled([
+        c.add('/SERCOP/index.html'),
+        c.add('/SERCOP/manifest.json'),
+        c.add('/SERCOP/sw.js'),
+      ])
+    )
   );
 });
 
@@ -18,6 +24,7 @@ self.addEventListener('activate', e => {
 
 // ── Cache-first para recursos estáticos ───────────────────────────────────────
 self.addEventListener('fetch', e => {
+  if (!e.request.url.startsWith('http')) return;
   if (e.request.url.includes('datosabiertos.compraspublicas') ||
       e.request.url.includes('nco-guayas.json')) return; // no cachear API
   e.respondWith(
@@ -44,7 +51,8 @@ self.addEventListener('message', e => {
 
 // ── Push desde servidor (futuro) ─────────────────────────────────────────────
 self.addEventListener('push', e => {
-  const data = e.data?.json() || {};
+  let data = {};
+  try { data = e.data?.json() || {}; } catch {};
   e.waitUntil(
     self.registration.showNotification(data.title || '🔥 Nuevo proceso SERCOP', {
       body: data.body || 'Hay un nuevo proceso de extintores en Guayas',
