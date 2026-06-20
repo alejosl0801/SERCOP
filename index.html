@@ -546,6 +546,7 @@
       <span class="results-title" id="results-title">Resultados</span>
       <span class="results-count" id="results-count"></span>
     </div>
+    <div id="debug-panel"></div>
     <div id="results-container">
       <div class="empty">
         <div class="empty-icon">🔍</div>
@@ -842,6 +843,18 @@ async function buscar(page = 1) {
 
     document.getElementById('results-title').textContent = `Resultados para: "${keyword}"`;
     document.getElementById('results-count').textContent = `${totalGlobal} proceso${totalGlobal !== 1 ? 's' : ''} encontrado${totalGlobal !== 1 ? 's' : ''}`;
+
+    // Mostrar debug del primer resultado para verificar campos de la API
+    if (todosItems.length > 0) {
+      const primerItem = todosItems[0];
+      const debugEl = document.getElementById('debug-panel');
+      if (debugEl) {
+        debugEl.innerHTML = `<details style="margin-bottom:16px;">
+          <summary style="cursor:pointer;color:#fbbf24;font-size:13px;font-weight:700;">🔧 DEBUG: Campos del primer resultado (expandir)</summary>
+          <pre style="margin-top:8px;background:#0f172a;padding:12px;border-radius:8px;font-size:11px;color:#4ade80;overflow:auto;max-height:300px">${JSON.stringify(primerItem, null, 2)}</pre>
+        </details>`;
+      }
+    }
 
     if (todosItems.length === 0) {
       document.getElementById('results-container').innerHTML = `
