@@ -714,26 +714,37 @@ function getTipoFromOcds(item) {
   return 'OTRO';
 }
 
+function copiarCodigo(codigo, btn) {
+  navigator.clipboard.writeText(codigo).then(() => {
+    btn.textContent = '✅ Copiado';
+    setTimeout(() => btn.textContent = '📋 Copiar código', 2000);
+  }).catch(() => {
+    prompt('Copia este código:', codigo);
+  });
+}
+
 function renderCard(p) {
   const tipoKey = getTipoFromOcds(p);
   const tipo = TIPOS[tipoKey] || { label: p.internal_type || 'Otro', css: 'type-other' };
 
   const ocid = p.ocid || '';
-  const codigo = ocid.replace(/^ocds-[a-z0-9]+-/, '') || p.id || '—';
+  const codigo = ocid.replace(/^ocds-[a-z0-9]+-/, '') || String(p.id) || '—';
 
+  // Dos URLs: datosabiertos para ficha completa, portal para buscar manualmente
   const urlDatos = `https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/procedimientos/${encodeURIComponent(ocid)}`;
 
-  // Campos correctos según el JSON real de la API
-  const descripcion = p.description || p.title || codigo;
-  const entidad = p.buyer || p.buyerName || '—';
-  const monto = p.amount ? '$' + parseFloat(p.amount).toLocaleString('es-EC', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '—';
-  const fecha = p.date ? p.date.substring(0, 10).split('-').reverse().join('/') : '—';
-  const lugar = [p.locality, p.region].filter(Boolean).join(', ') || '—';
-  const anio = p.year || '—';
-  const esSingle = p.single_provider === true || p.single_provider === 'true' || p.single_provider === 1;
+  // Campos con manejo defensivo de null/undefined
+  const descripcion = (p.description && p.description !== p.title ? p.description : null) || p.title || codigo;
+  const entidad     = p.buyer || p.buyerName || p.buyer_name || 'No especificada';
+  const monto       = p.amount && parseFloat(p.amount) > 0
+                      ? '$' + parseFloat(p.amount).toLocaleString('es-EC', {minimumFractionDigits:2, maximumFractionDigits:2})
+                      : 'Consultar';
+  const fecha       = p.date ? p.date.substring(0,10).split('-').reverse().join('/') : '—';
+  const lugar       = [p.locality, p.region].filter(x => x && x.trim()).join(', ') || '—';
+  const esSingle    = p.single_provider === true || p.single_provider === 'true' || p.single_provider === 1;
 
   return `
-    <div class="process-card" onclick="window.open('${urlDatos}', '_blank')">
+    <div class="process-card">
       <div class="process-card-header">
         <span class="process-type-badge ${tipo.css}">${tipo.label}</span>
         <span class="process-title">${descripcion}</span>
@@ -758,9 +769,9 @@ function renderCard(p) {
       </div>
       <div class="process-footer">
         <span class="entidad-name">🏛️ ${entidad}</span>
-        <div style="display:flex;gap:8px;align-items:center">
-          <span style="font-size:11px;color:#475569">${codigo}</span>
-          <a class="btn-ver" href="${urlDatos}" target="_blank" onclick="event.stopPropagation()" style="background:#ef4444;color:white;border-color:#ef4444">Ver detalle →</a>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button class="btn-ver" onclick="copiarCodigo('${codigo}', this)" style="background:transparent;color:#94a3b8;border-color:#475569">📋 Copiar código</button>
+          <a class="btn-ver" href="${urlDatos}" target="_blank" style="background:#ef4444;color:white;border-color:#ef4444">Ver detalle →</a>
         </div>
       </div>
     </div>
