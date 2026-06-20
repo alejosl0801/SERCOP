@@ -810,6 +810,11 @@ function renderCard(p) {
   // Campos con manejo defensivo de null/undefined
   const descripcion = (p.description && p.description !== p.title ? p.description : null) || p.title || codigo;
   const entidad     = p.buyer || p.buyerName || p.buyer_name || 'No especificada';
+  const estadoProceso = (p.method || '').toLowerCase();
+  const estadoLabel = estadoProceso === 'open' ? '<span style="color:#4ade80;font-weight:700">✅ ABIERTO</span>'
+                    : estadoProceso === 'complete' ? '<span style="color:#f87171;font-weight:700">🔴 CERRADO</span>'
+                    : estadoProceso === 'awarded' ? '<span style="color:#fbbf24;font-weight:700">🏆 ADJUDICADO</span>'
+                    : `<span style="color:#94a3b8">${p.method || '—'}</span>`;
   const monto       = p.amount && parseFloat(p.amount) > 0
                       ? '$' + parseFloat(p.amount).toLocaleString('es-EC', {minimumFractionDigits:2, maximumFractionDigits:2})
                       : 'Consultar';
@@ -835,6 +840,10 @@ function renderCard(p) {
         <div class="meta-item">
           <span class="meta-label">Ubicación</span>
           <span class="meta-value">${lugar}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Estado</span>
+          <span class="meta-value">${estadoLabel}</span>
         </div>
         <div class="meta-item">
           <span class="meta-label">Proveedor único</span>
@@ -937,10 +946,22 @@ async function buscar(page = 1) {
 
     // Filtrar por provincia
     if (provinciaFiltro) {
+      // Mapa de alias: lo que el usuario selecciona vs lo que puede venir en region/locality
+      const aliases = {
+        'GUAYAS': ['GUAYAS','GUAYAQUIL','SAMBORONDON','DAULE','MILAGRO','DURAN','YAGUACHI'],
+        'SANTA ELENA': ['SANTA ELENA','LA LIBERTAD','SALINAS'],
+        'LOS RIOS': ['LOS RIOS','LOS RÍOS','BABAHOYO','QUEVEDO'],
+        'EL ORO': ['EL ORO','MACHALA','PASAJE','SANTA ROSA'],
+        'MANABI': ['MANABI','MANABÍ','MANTA','PORTOVIEJO','CHONE'],
+        'AZUAY': ['AZUAY','CUENCA'],
+        'PICHINCHA': ['PICHINCHA','QUITO'],
+        'LOJA': ['LOJA'],
+      };
+      const terminos = aliases[provinciaFiltro] || [provinciaFiltro];
       todosItems = todosItems.filter(p => {
         const r = (p.region || '').toUpperCase();
         const l = (p.locality || '').toUpperCase();
-        return r.includes(provinciaFiltro) || l.includes(provinciaFiltro);
+        return terminos.some(t => r.includes(t) || l.includes(t));
       });
       totalGlobal = todosItems.length;
       pagesGlobal = 1;
