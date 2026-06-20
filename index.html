@@ -720,9 +720,10 @@ function renderCard(p) {
   // El código de proceso es el OCID sin el prefijo "ocds-5wno2w-"
   const codigo = ocid.replace(/^ocds-[a-z0-9]+-/, '') || p.id || '—';
 
-  // URL correcta: buscar por código en el portal de compras públicas
-  const urlPortal = `https://www.compraspublicas.gob.ec/ProcesoContratacion/compras/PC/buscarProceso.cpe?codigoProceso=${encodeURIComponent(codigo)}&sg=1`;
+  // URL datosabiertos: abre directamente la ficha del proceso sin captcha
   const urlDatos = `https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/procedimientos/${encodeURIComponent(ocid)}`;
+  // URL portal: búsqueda manual por código (requiere captcha)
+  const urlPortal = `https://www.compraspublicas.gob.ec/ProcesoContratacion/compras/PC/buscarProceso.cpe?sg=1`;
 
   // Intentar todos los campos posibles de la respuesta OCDS
   const titulo = p.title || p.description || p.nombre || codigo || 'Sin descripción';
@@ -732,7 +733,7 @@ function renderCard(p) {
   const esSingle = p.single_provider === true || p.single_provider === 'true' || p.single_provider === 1;
 
   return `
-    <div class="process-card" onclick="window.open('${urlPortal}', '_blank')">
+    <div class="process-card" onclick="window.open('${urlDatos}', '_blank')">
       <div class="process-card-header">
         <span class="process-type-badge ${tipo.css}">${tipo.label}</span>
         <span class="process-title">${titulo}</span>
@@ -740,7 +741,7 @@ function renderCard(p) {
       <div class="process-meta">
         <div class="meta-item">
           <span class="meta-label">Código</span>
-          <span class="meta-value" style="font-size:12px">${codigo}</span>
+          <span class="meta-value" style="font-size:11px;word-break:break-all">${codigo}</span>
         </div>
         <div class="meta-item">
           <span class="meta-label">Año</span>
@@ -756,10 +757,10 @@ function renderCard(p) {
         </div>
       </div>
       <div class="process-footer">
-        <span class="entidad-name">🏛️ ${entidad || 'Ver en portal →'}</span>
-        <div style="display:flex;gap:8px">
-          <a class="btn-ver" href="${urlDatos}" target="_blank" onclick="event.stopPropagation()">Datos OCDS</a>
-          <a class="btn-ver" href="${urlPortal}" target="_blank" onclick="event.stopPropagation()" style="background:#ef4444;color:white;border-color:#ef4444">Ver proceso →</a>
+        <span class="entidad-name">🏛️ ${entidad || codigo}</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <span style="font-size:11px;color:#475569" title="Copia este código en SERCOP">📋 ${codigo}</span>
+          <a class="btn-ver" href="${urlDatos}" target="_blank" onclick="event.stopPropagation()" style="background:#ef4444;color:white;border-color:#ef4444">Ver detalle →</a>
         </div>
       </div>
     </div>
