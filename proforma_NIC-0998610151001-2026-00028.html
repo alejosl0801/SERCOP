@@ -28,11 +28,16 @@
   ul.compromisos { margin-left: 16px; font-size: 10px; }
   ul.compromisos li { margin-bottom: 2px; }
   .footer-note { font-size: 9px; color: #555; margin-top: 6px; text-align: center; }
+  @page { size: A4; margin: 10mm 12mm; }
   @media print {
     body { font-size: 10px; }
-    .page { padding: 10mm 12mm; }
+    .page { width: 100%; padding: 0; margin: 0; }
     .no-print { display: none; }
     .carta-page { page-break-before: always; }
+    .items th { font-size: 9px; }
+    .items td { font-size: 9px; }
+    table td, table th { padding: 3px 4px; }
+    .ref { padding-right: 2mm; }
   }
   .print-btn { text-align: center; margin: 20px; }
   .print-btn button { padding: 10px 30px; font-size: 14px; background: #2c3e50; color: #fff; border: none; cursor: pointer; border-radius: 4px; }
@@ -243,15 +248,7 @@
   <table>
     <tr>
       <td style="width:50%">
-        <div class="firma-box">
-          <br><br><br><br><br>
-          ______________________________________<br>
-          <strong>Alejandro Alberto López Mejía</strong><br>
-          C.I.: 0952773976<br>
-          Propietario — PREVIFUEGO<br>
-          RUC: 0952773976001<br>
-          Telf: 0983583325
-        </div>
+        <div class="firma-box" style="min-height:130px;">&nbsp;</div>
       </td>
       <td style="width:50%; vertical-align:top; padding-left: 12px; font-size:10px;">
         <strong>Documentos adjuntos:</strong><br>
@@ -301,14 +298,7 @@
   Atentamente,
   </p>
 
-  <div class="firma-box" style="width:60%; margin-top:4px; min-height:130px;">
-    <br><br><br><br><br>
-    ______________________________________<br>
-    <strong>Alejandro Alberto López Mejía</strong><br>
-    C.I.: 0952773976<br>
-    Propietario — PREVIFUEGO<br>
-    RUC: 0952773976001
-  </div>
+  <div class="firma-box" style="width:60%; margin-top:4px; min-height:130px;">&nbsp;</div>
 
 </div>
 
