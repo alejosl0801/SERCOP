@@ -512,8 +512,8 @@
   <!-- Búsqueda -->
   <div class="search-bar">
     <div class="search-group" style="flex:2">
-      <label>Buscar</label>
-      <input type="text" id="input-keyword" value="extintores" placeholder="ej: extintores, recarga, incendios..." />
+      <label>Buscar servicio (no ciudad)</label>
+      <input type="text" id="input-keyword" value="extintores" placeholder="ej: extintores, recarga incendios..." />
     </div>
     <div class="search-group">
       <label>Tipo de proceso</label>
@@ -592,7 +592,6 @@
       <span class="results-title" id="results-title">Resultados</span>
       <span class="results-count" id="results-count"></span>
     </div>
-    <div id="debug-panel"></div>
     <div id="results-container">
       <div class="empty">
         <div class="empty-icon">🔍</div>
@@ -933,38 +932,67 @@ async function buscar(page = 1) {
       });
     }
 
-    // Si hay pocos resultados en año actual, también buscar año anterior
-    if (todosItems.length < 5 && page === 1 && !provinciaFiltro) {
+    // Buscar siempre también el año anterior para no perder procesos recientes
+    if (page === 1) {
       const params2 = new URLSearchParams({ year: AÑO_ACTUAL - 1, search: keyword, page: 1 });
       const res2 = await fetch(`${API_BASE}?${params2}`);
       if (res2.ok) {
         const data2 = await res2.json();
-        todosItems = [...todosItems, ...(data2.data || data2.results || [])];
-        totalGlobal += (data2.total || 0);
+        const items2 = data2.data || data2.results || [];
+        // Si hay provincia filtro, traer todas las páginas del año anterior también
+        if (provinciaFiltro && (data2.pages || 1) > 1) {
+          const fetches2 = [];
+          for (let p2 = 2; p2 <= Math.min(data2.pages, 10); p2++) {
+            const pp = new URLSearchParams({ year: AÑO_ACTUAL - 1, search: keyword, page: p2 });
+            fetches2.push(fetch(`${API_BASE}?${pp}`).then(r => r.ok ? r.json() : null));
+          }
+          const extras2 = await Promise.all(fetches2);
+          extras2.forEach(d => { if (d) items2.push(...(d.data || [])); });
+        }
+        todosItems = [...todosItems, ...items2];
+        totalGlobal = todosItems.length;
       }
     }
 
     // Filtrar por provincia
     if (provinciaFiltro) {
-      // Mapa de alias: lo que el usuario selecciona vs lo que puede venir en region/locality
       const aliases = {
-        'GUAYAS': ['GUAYAS','GUAYAQUIL','SAMBORONDON','DAULE','MILAGRO','DURAN','YAGUACHI'],
+        'GUAYAS': ['GUAYAS','GUAYAQUIL','SAMBORONDON','SAMBORONDÓN','DAULE','MILAGRO','DURAN','DURÁN','YAGUACHI','NARANJAL','PLAYAS','BALAO','EL TRIUNFO','NOBOL','PEDRO CARBO','PALESTINA','BALZAR','COLIMES','LOMAS DE SARGENTILLO','SANTA LUCIA','SANTA LUCÍA'],
         'SANTA ELENA': ['SANTA ELENA','LA LIBERTAD','SALINAS'],
-        'LOS RIOS': ['LOS RIOS','LOS RÍOS','BABAHOYO','QUEVEDO'],
-        'EL ORO': ['EL ORO','MACHALA','PASAJE','SANTA ROSA'],
-        'MANABI': ['MANABI','MANABÍ','MANTA','PORTOVIEJO','CHONE'],
+        'LOS RIOS': ['LOS RIOS','LOS RÍOS','BABAHOYO','QUEVEDO','VINCES','VENTANAS','PUEBLO VIEJO'],
+        'EL ORO': ['EL ORO','MACHALA','PASAJE','SANTA ROSA','HUAQUILLAS','EL GUABO','ARENILLAS'],
+        'MANABI': ['MANABI','MANABÍ','MANTA','PORTOVIEJO','CHONE','JIPIJAPA','BAHIA','BAHÍA'],
         'AZUAY': ['AZUAY','CUENCA'],
         'PICHINCHA': ['PICHINCHA','QUITO'],
         'LOJA': ['LOJA'],
+        'BOLIVAR': ['BOLIVAR','BOLÍVAR','GUARANDA'],
+        'TUNGURAHUA': ['TUNGURAHUA','AMBATO'],
+        'CHIMBORAZO': ['CHIMBORAZO','RIOBAMBA'],
+        'IMBABURA': ['IMBABURA','IBARRA'],
+        'COTOPAXI': ['COTOPAXI','LATACUNGA'],
+        'ESMERALDAS': ['ESMERALDAS'],
+        'NAPO': ['NAPO','ORIENTE','TENA'],
       };
       const terminos = aliases[provinciaFiltro] || [provinciaFiltro];
       todosItems = todosItems.filter(p => {
         const r = (p.region || '').toUpperCase();
         const l = (p.locality || '').toUpperCase();
-        return terminos.some(t => r.includes(t) || l.includes(t));
+        const b = (p.buyer || '').toUpperCase();
+        const d = (p.description || '').toUpperCase();
+        return terminos.some(t => r.includes(t) || l.includes(t) || b.includes(t) || d.includes(t));
       });
       totalGlobal = todosItems.length;
       pagesGlobal = 1;
+    }
+
+    // Filtrar por estado (abierto/adjudicado)
+    if (estado) {
+      const estadoMap = { '1': 'open', '3': 'awarded', '4': 'complete' };
+      const estadoVal = estadoMap[estado];
+      if (estadoVal) {
+        todosItems = todosItems.filter(p => (p.method || '').toLowerCase() === estadoVal);
+        totalGlobal = todosItems.length;
+      }
     }
 
     currentPage = page;
@@ -976,16 +1004,6 @@ async function buscar(page = 1) {
     document.getElementById('results-count').textContent = `${totalGlobal} proceso${totalGlobal !== 1 ? 's' : ''} encontrado${totalGlobal !== 1 ? 's' : ''}`;
 
     // Mostrar debug del primer resultado para verificar campos de la API
-    if (todosItems.length > 0) {
-      const primerItem = todosItems[0];
-      const debugEl = document.getElementById('debug-panel');
-      if (debugEl) {
-        debugEl.innerHTML = `<details style="margin-bottom:16px;">
-          <summary style="cursor:pointer;color:#fbbf24;font-size:13px;font-weight:700;">🔧 DEBUG: Campos del primer resultado (expandir)</summary>
-          <pre style="margin-top:8px;background:#0f172a;padding:12px;border-radius:8px;font-size:11px;color:#4ade80;overflow:auto;max-height:300px">${JSON.stringify(primerItem, null, 2)}</pre>
-        </details>`;
-      }
-    }
 
     if (todosItems.length === 0) {
       document.getElementById('results-container').innerHTML = `
