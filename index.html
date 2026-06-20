@@ -459,6 +459,25 @@
 
 <div class="container">
 
+  <!-- Alerta automática -->
+  <div id="alerta-banner" style="background:linear-gradient(135deg,#1e1a2e,#0f172a);border:1px solid #7c3aed44;border-radius:12px;padding:20px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:gap;gap:12px;">
+    <div>
+      <div style="font-size:14px;font-weight:700;color:#a78bfa;margin-bottom:4px;">🔔 Alerta automática — Guayas</div>
+      <div style="font-size:13px;color:#64748b;" id="alerta-estado">Inactiva — actívala para recibir notificaciones cuando aparezca un proceso en tu zona</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <select id="alerta-intervalo" style="background:#0f172a;border:1px solid #334155;color:#e2e8f0;padding:8px 12px;border-radius:8px;font-size:13px;">
+        <option value="30">Cada 30 min</option>
+        <option value="60" selected>Cada 1 hora</option>
+        <option value="180">Cada 3 horas</option>
+        <option value="480">Cada 8 horas</option>
+      </select>
+      <button id="btn-alerta" onclick="toggleAlerta()" style="background:#7c3aed;color:white;border:none;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">
+        🔔 Activar alerta
+      </button>
+    </div>
+  </div>
+
   <!-- Estrategia -->
   <div class="strategy-banner">
     <h3>⚡ Estrategia para ganar contratos</h3>
@@ -982,7 +1001,126 @@ async function buscar(page = 1) {
   }
 }
 
-window.addEventListener('load', () => buscar(1));
+// ===================== SISTEMA DE ALERTAS =====================
+let alertaTimer = null;
+const ALERTA_KEY = 'sercop_alerta_activa';
+const PROCESOS_VISTOS_KEY = 'sercop_procesos_vistos';
+
+function getProcesosVistos() {
+  try { return JSON.parse(localStorage.getItem(PROCESOS_VISTOS_KEY) || '[]'); } catch { return []; }
+}
+
+function guardarProcesosVistos(ids) {
+  localStorage.setItem(PROCESOS_VISTOS_KEY, JSON.stringify(ids));
+}
+
+async function verificarNuevosEnGuayas() {
+  const keywords = ['extintores', 'recarga extintores', 'mantenimiento extintores', 'proteccion incendios'];
+  let nuevos = [];
+  const vistos = getProcesosVistos();
+
+  for (const kw of keywords) {
+    try {
+      const params = new URLSearchParams({ year: AÑO_ACTUAL, search: kw, page: 1 });
+      const res = await fetch(`${API_BASE}?${params}`);
+      if (!res.ok) continue;
+      const data = await res.json();
+      const items = (data.data || []).filter(p => {
+        const region = (p.region || '').toUpperCase();
+        const locality = (p.locality || '').toUpperCase();
+        return region.includes('GUAYAS') || locality.includes('GUAYAS') ||
+               locality.includes('GUAYAQUIL') || region.includes('GUAYAQUIL');
+      });
+      items.forEach(p => {
+        const id = p.ocid || String(p.id);
+        if (!vistos.includes(id)) nuevos.push(p);
+      });
+    } catch {}
+  }
+
+  // Eliminar duplicados
+  nuevos = nuevos.filter((p, i, arr) =>
+    arr.findIndex(x => (x.ocid || x.id) === (p.ocid || p.id)) === i
+  );
+
+  if (nuevos.length > 0) {
+    // Guardar como vistos
+    const idsNuevos = nuevos.map(p => p.ocid || String(p.id));
+    guardarProcesosVistos([...vistos, ...idsNuevos]);
+
+    // Notificación del navegador
+    if (Notification.permission === 'granted') {
+      nuevos.forEach(p => {
+        const n = new Notification('🔥 Nuevo proceso en Guayas — SERCOP', {
+          body: `${p.description || p.title || p.ocid}\n${p.buyer || ''} | $${parseFloat(p.amount||0).toLocaleString('es-EC')}`,
+          icon: 'https://alejosl0801.github.io/SERCOP/favicon.ico',
+          tag: p.ocid || String(p.id),
+        });
+        n.onclick = () => {
+          window.focus();
+          window.open(`https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/ocds/${encodeURIComponent(p.ocid)}`, '_blank');
+        };
+      });
+    }
+
+    // Toast en pantalla
+    mostrarToast(`🚨 ${nuevos.length} nuevo(s) proceso(s) en Guayas! Revísalos ahora.`);
+
+    // Mostrar en la herramienta
+    document.getElementById('input-provincia').value = 'GUAYAS';
+    document.getElementById('input-keyword').value = 'extintores';
+    buscar(1);
+  }
+
+  // Actualizar estado
+  const ahora = new Date().toLocaleTimeString('es-EC', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('alerta-estado').textContent =
+    `✅ Activa — última revisión: ${ahora}${nuevos.length > 0 ? ` — ¡${nuevos.length} nuevo(s)!` : ' — sin novedades'}`;
+}
+
+async function toggleAlerta() {
+  const btn = document.getElementById('btn-alerta');
+
+  if (alertaTimer) {
+    // Desactivar
+    clearInterval(alertaTimer);
+    alertaTimer = null;
+    localStorage.removeItem(ALERTA_KEY);
+    btn.textContent = '🔔 Activar alerta';
+    btn.style.background = '#7c3aed';
+    document.getElementById('alerta-estado').textContent = 'Inactiva — actívala para recibir notificaciones cuando aparezca un proceso en tu zona';
+    return;
+  }
+
+  // Pedir permiso de notificaciones
+  if (Notification.permission === 'default') {
+    const permiso = await Notification.requestPermission();
+    if (permiso !== 'granted') {
+      mostrarToast('⚠️ Activa las notificaciones del navegador para recibir alertas');
+    }
+  }
+
+  // Activar
+  const minutos = parseInt(document.getElementById('alerta-intervalo').value);
+  localStorage.setItem(ALERTA_KEY, minutos);
+
+  btn.textContent = '🔕 Desactivar alerta';
+  btn.style.background = '#dc2626';
+  document.getElementById('alerta-estado').textContent = `✅ Activa — revisando cada ${minutos >= 60 ? (minutos/60)+'h' : minutos+'min'} — esperando primera revisión...`;
+
+  // Revisar inmediatamente y luego cada X minutos
+  verificarNuevosEnGuayas();
+  alertaTimer = setInterval(verificarNuevosEnGuayas, minutos * 60 * 1000);
+}
+
+// Restaurar alerta si estaba activa
+window.addEventListener('load', () => {
+  buscar(1);
+  const minGuardados = localStorage.getItem(ALERTA_KEY);
+  if (minGuardados) {
+    setTimeout(() => toggleAlerta(), 2000);
+  }
+});
 
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('input-keyword').addEventListener('keydown', e => {
