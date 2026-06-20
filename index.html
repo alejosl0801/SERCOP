@@ -485,7 +485,7 @@
       <div class="stat-value yellow" id="stat-mc">—</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">Sin proveedor único</div>
+      <div class="stat-label">Presupuesto total</div>
       <div class="stat-value red" id="stat-urgent">—</div>
     </div>
   </div>
@@ -717,18 +717,16 @@ function renderCard(p) {
   const tipo = TIPOS[tipoKey] || { label: p.internal_type || 'Otro', css: 'type-other' };
 
   const ocid = p.ocid || '';
-  // El código de proceso es el OCID sin el prefijo "ocds-5wno2w-"
   const codigo = ocid.replace(/^ocds-[a-z0-9]+-/, '') || p.id || '—';
 
-  // URL datosabiertos: abre directamente la ficha del proceso sin captcha
   const urlDatos = `https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/procedimientos/${encodeURIComponent(ocid)}`;
-  // URL portal: búsqueda manual por código (requiere captcha)
-  const urlPortal = `https://www.compraspublicas.gob.ec/ProcesoContratacion/compras/PC/buscarProceso.cpe?sg=1`;
 
-  // Intentar todos los campos posibles de la respuesta OCDS
-  const titulo = p.title || p.description || p.nombre || codigo || 'Sin descripción';
-  const entidad = p.buyerName || p.buyer_name || p.buyer?.name || p.nombre_entidad || p.entidad || '';
-  const fecha = p.date ? new Date(p.date).toLocaleDateString('es-EC') : '—';
+  // Campos correctos según el JSON real de la API
+  const descripcion = p.description || p.title || codigo;
+  const entidad = p.buyer || p.buyerName || '—';
+  const monto = p.amount ? '$' + parseFloat(p.amount).toLocaleString('es-EC', {minimumFractionDigits: 2, maximumFractionDigits: 2}) : '—';
+  const fecha = p.date ? p.date.substring(0, 10).split('-').reverse().join('/') : '—';
+  const lugar = [p.locality, p.region].filter(Boolean).join(', ') || '—';
   const anio = p.year || '—';
   const esSingle = p.single_provider === true || p.single_provider === 'true' || p.single_provider === 1;
 
@@ -736,20 +734,20 @@ function renderCard(p) {
     <div class="process-card" onclick="window.open('${urlDatos}', '_blank')">
       <div class="process-card-header">
         <span class="process-type-badge ${tipo.css}">${tipo.label}</span>
-        <span class="process-title">${titulo}</span>
+        <span class="process-title">${descripcion}</span>
       </div>
       <div class="process-meta">
         <div class="meta-item">
-          <span class="meta-label">Código</span>
-          <span class="meta-value" style="font-size:11px;word-break:break-all">${codigo}</span>
+          <span class="meta-label">Presupuesto</span>
+          <span class="meta-value highlight">${monto}</span>
         </div>
         <div class="meta-item">
-          <span class="meta-label">Año</span>
-          <span class="meta-value">${anio}</span>
-        </div>
-        <div class="meta-item">
-          <span class="meta-label">Fecha publicación</span>
+          <span class="meta-label">Publicación</span>
           <span class="meta-value">${fecha}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Ubicación</span>
+          <span class="meta-value">${lugar}</span>
         </div>
         <div class="meta-item">
           <span class="meta-label">Proveedor único</span>
@@ -757,9 +755,9 @@ function renderCard(p) {
         </div>
       </div>
       <div class="process-footer">
-        <span class="entidad-name">🏛️ ${entidad || codigo}</span>
+        <span class="entidad-name">🏛️ ${entidad}</span>
         <div style="display:flex;gap:8px;align-items:center">
-          <span style="font-size:11px;color:#475569" title="Copia este código en SERCOP">📋 ${codigo}</span>
+          <span style="font-size:11px;color:#475569">${codigo}</span>
           <a class="btn-ver" href="${urlDatos}" target="_blank" onclick="event.stopPropagation()" style="background:#ef4444;color:white;border-color:#ef4444">Ver detalle →</a>
         </div>
       </div>
@@ -770,12 +768,13 @@ function renderCard(p) {
 function updateStats(total, items) {
   const sie = items.filter(p => getTipoFromOcds(p) === 'SIE').length;
   const mc  = items.filter(p => getTipoFromOcds(p) === 'MC').length;
-  const noUnico = items.filter(p => !p.single_provider).length;
+  const montoTotal = items.reduce((s, p) => s + (parseFloat(p.amount) || 0), 0);
+  const montoStr = montoTotal > 0 ? '$' + montoTotal.toLocaleString('es-EC', {minimumFractionDigits: 0, maximumFractionDigits: 0}) : '—';
 
   document.getElementById('stat-total').textContent = total;
   document.getElementById('stat-sie').textContent = sie;
   document.getElementById('stat-mc').textContent = mc;
-  document.getElementById('stat-urgent').textContent = noUnico;
+  document.getElementById('stat-urgent').textContent = montoStr;
 }
 
 function renderPagination(page, pages) {
