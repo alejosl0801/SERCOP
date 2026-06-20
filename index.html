@@ -508,6 +508,33 @@
       </select>
     </div>
     <div class="search-group">
+      <label>Provincia (mi zona)</label>
+      <select id="input-provincia">
+        <option value="">Todas las provincias</option>
+        <optgroup label="✅ Mi zona — Costa">
+          <option value="GUAYAS">Guayas (Guayaquil)</option>
+          <option value="SANTA ELENA">Santa Elena</option>
+          <option value="LOS RIOS">Los Ríos</option>
+          <option value="MANABI">Manabí</option>
+          <option value="EL ORO">El Oro</option>
+          <option value="ESMERALDAS">Esmeraldas</option>
+        </optgroup>
+        <optgroup label="⚠️ Cerca — puede salir">
+          <option value="AZUAY">Azuay (Cuenca)</option>
+          <option value="CAÑAR">Cañar</option>
+          <option value="BOLIVAR">Bolívar</option>
+        </optgroup>
+        <optgroup label="❌ Sierra — no rentable">
+          <option value="PICHINCHA">Pichincha (Quito)</option>
+          <option value="LOJA">Loja</option>
+          <option value="TUNGURAHUA">Tungurahua</option>
+          <option value="CHIMBORAZO">Chimborazo</option>
+          <option value="IMBABURA">Imbabura</option>
+          <option value="COTOPAXI">Cotopaxi</option>
+        </optgroup>
+      </select>
+    </div>
+    <div class="search-group">
       <label>Estado</label>
       <select id="input-estado">
         <option value="1">En proceso (abiertos)</option>
@@ -833,6 +860,7 @@ function renderPagination(page, pages) {
 async function buscar(page = 1) {
   const keyword = document.getElementById('input-keyword').value.trim() || 'extintores';
   const estado = document.getElementById('input-estado').value;
+  const provinciaFiltro = document.getElementById('input-provincia').value.toUpperCase();
 
   document.getElementById('btn-buscar').disabled = true;
   document.getElementById('results-container').innerHTML = `
@@ -875,6 +903,16 @@ async function buscar(page = 1) {
         todosItems = [...todosItems, ...items2];
         totalGlobal += (data2.total || 0);
       }
+    }
+
+    // Filtrar por provincia si el usuario seleccionó una
+    if (provinciaFiltro) {
+      todosItems = todosItems.filter(p => {
+        const r = (p.region || '').toUpperCase();
+        const l = (p.locality || '').toUpperCase();
+        return r.includes(provinciaFiltro) || l.includes(provinciaFiltro);
+      });
+      totalGlobal = todosItems.length;
     }
 
     currentPage = page;
