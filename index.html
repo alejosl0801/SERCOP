@@ -730,7 +730,13 @@ function renderCard(p) {
   const ocid = p.ocid || '';
   const codigo = ocid.replace(/^ocds-[a-z0-9]+-/, '') || String(p.id) || '—';
 
-  // Dos URLs: datosabiertos para ficha completa, portal para buscar manualmente
+  // Detectar portal correcto según código del proceso
+  // CELECEP, corporativas → módulo corporativo; resto → portal general
+  const esCorporativo = /CELEC|CORPORAT|CORP/i.test(codigo);
+  const portalBase = esCorporativo
+    ? 'https://modulocomprascorporativas.compraspublicas.gob.ec/ProcesoContratacion/compras/PC/buscarProceso.cpe'
+    : 'https://www.compraspublicas.gob.ec/ProcesoContratacion/compras/PC/buscarProceso.cpe';
+  const urlPortal = `${portalBase}?codigoProceso=${encodeURIComponent(codigo)}&sg=1`;
   const urlDatos = `https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/procedimientos/${encodeURIComponent(ocid)}`;
 
   // Campos con manejo defensivo de null/undefined
@@ -771,7 +777,8 @@ function renderCard(p) {
         <span class="entidad-name">🏛️ ${entidad}</span>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <button class="btn-ver" onclick="copiarCodigo('${codigo}', this)" style="background:transparent;color:#94a3b8;border-color:#475569">📋 Copiar código</button>
-          <a class="btn-ver" href="${urlDatos}" target="_blank" style="background:#ef4444;color:white;border-color:#ef4444">Ver detalle →</a>
+          <a class="btn-ver" href="${urlDatos}" target="_blank" style="background:transparent;color:#38bdf8;border-color:#38bdf8">Datos OCDS</a>
+          <a class="btn-ver" href="${urlPortal}" target="_blank" style="background:#ef4444;color:white;border-color:#ef4444">${esCorporativo ? '🏢 Portal Corp.' : '🔗 Ver en SERCOP'} →</a>
         </div>
       </div>
     </div>
