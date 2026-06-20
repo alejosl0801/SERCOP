@@ -509,6 +509,33 @@
     </div>
   </div>
 
+  <!-- Tabs -->
+  <div style="display:flex;gap:8px;margin-bottom:20px;border-bottom:1px solid #334155;">
+    <button id="tab-nco" onclick="mostrarTab('nco')" style="background:#7c3aed;color:white;border:none;padding:10px 20px;border-radius:8px 8px 0 0;font-size:14px;font-weight:700;cursor:pointer;">
+      📋 Ínfimas Cuantías — Guayas
+    </button>
+    <button id="tab-sie" onclick="mostrarTab('sie')" style="background:#1e293b;color:#94a3b8;border:none;padding:10px 20px;border-radius:8px 8px 0 0;font-size:14px;font-weight:700;cursor:pointer;">
+      🏆 Subastas Inversas
+    </button>
+  </div>
+
+  <!-- Panel NCO -->
+  <div id="panel-nco">
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:16px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#4ade80;">📋 Necesidades de Contratación en Guayas</div>
+        <div style="font-size:12px;color:#64748b;margin-top:4px;" id="nco-actualizado">Cargando datos...</div>
+      </div>
+      <button onclick="cargarNCO()" style="background:#334155;color:#e2e8f0;border:none;padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;">🔄 Actualizar</button>
+    </div>
+    <div id="nco-container">
+      <div class="loading"><div class="spinner"></div><p>Cargando necesidades de Guayas...</p></div>
+    </div>
+  </div>
+
+  <!-- Panel SIE (búsqueda existente) -->
+  <div id="panel-sie" style="display:none;">
+
   <!-- Búsqueda -->
   <div class="search-bar">
     <div class="search-group" style="flex:2">
@@ -613,6 +640,8 @@
     </div>
     <div class="pagination" id="pagination"></div>
   </div>
+
+  </div> <!-- cierra panel-sie -->
 
   <!-- Panel estrategia -->
   <div id="panel-estrategia" style="display:none">
@@ -720,6 +749,21 @@
     </div>
   </div>
 
+</div>
+
+<!-- Modal Proforma -->
+<div id="modal-proforma" style="display:none;position:fixed;inset:0;background:#000a;z-index:1000;overflow:auto;padding:20px;">
+  <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;max-width:700px;margin:0 auto;padding:28px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 style="color:#f1f5f9;font-size:18px;">📄 Generar Proforma</h2>
+      <button onclick="cerrarProforma()" style="background:#334155;color:#e2e8f0;border:none;padding:6px 14px;border-radius:8px;cursor:pointer;font-size:18px;">✕</button>
+    </div>
+    <div id="proforma-content"></div>
+    <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button onclick="copiarProforma()" style="background:#4ade80;color:#000;border:none;padding:10px 20px;border-radius:8px;font-weight:700;cursor:pointer;">📋 Copiar proforma</button>
+      <button onclick="cerrarProforma()" style="background:#334155;color:#e2e8f0;border:none;padding:10px 20px;border-radius:8px;cursor:pointer;">Cancelar</button>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -1188,6 +1232,268 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('input-keyword').addEventListener('keydown', e => {
     if (e.key === 'Enter') buscar(1);
   });
+});
+
+// ─── TABS ────────────────────────────────────────────────────────────────────
+function mostrarTab(tab) {
+  const isNco = tab === 'nco';
+  document.getElementById('panel-nco').style.display = isNco ? '' : 'none';
+  document.getElementById('panel-sie').style.display = isNco ? 'none' : '';
+  document.getElementById('tab-nco').style.background = isNco ? '#7c3aed' : '#1e293b';
+  document.getElementById('tab-nco').style.color = isNco ? 'white' : '#94a3b8';
+  document.getElementById('tab-sie').style.background = isNco ? '#1e293b' : '#7c3aed';
+  document.getElementById('tab-sie').style.color = isNco ? '#94a3b8' : 'white';
+  if (isNco) cargarNCO();
+}
+
+// ─── NCO ─────────────────────────────────────────────────────────────────────
+let ncoData = null;
+
+async function cargarNCO() {
+  const container = document.getElementById('nco-container');
+  const actEl = document.getElementById('nco-actualizado');
+  container.innerHTML = '<div class="loading"><div class="spinner"></div><p>Cargando necesidades de Guayas...</p></div>';
+
+  try {
+    const res = await fetch(`nco-guayas.json?t=${Date.now()}`);
+    if (!res.ok) throw new Error('No hay datos aún');
+    ncoData = await res.json();
+
+    const fecha = new Date(ncoData.actualizado);
+    actEl.textContent = `Última actualización: ${fecha.toLocaleString('es-EC')} — ${ncoData.total} proceso(s) en Guayas`;
+
+    if (!ncoData.procesos || ncoData.procesos.length === 0) {
+      container.innerHTML = `
+        <div class="empty">
+          <div class="empty-icon">📭</div>
+          <p>No hay necesidades activas de extintores en Guayas en este momento.</p>
+          <p style="font-size:13px;color:#64748b;margin-top:8px;">Se actualiza cada hora automáticamente.</p>
+        </div>`;
+      return;
+    }
+
+    container.innerHTML = ncoData.procesos.map(renderNCO).join('');
+  } catch (e) {
+    actEl.textContent = 'Sin datos aún — el bot actualizará en la próxima hora';
+    container.innerHTML = `
+      <div class="empty">
+        <div class="empty-icon">⏳</div>
+        <p style="color:#fbbf24;font-weight:700;">El monitor automático aún no ha corrido.</p>
+        <p style="font-size:13px;color:#64748b;margin-top:8px;">
+          GitHub Actions ejecutará el scraper en la próxima hora y los datos aparecerán aquí.<br>
+          Mientras tanto, busca manualmente en:<br>
+          <a href="https://compraspublicas.gob.ec/ProcesoContratacion/compras/NCO/FrmNCOListado.cpe"
+             target="_blank" style="color:#60a5fa;">compraspublicas.gob.ec → NCO → busca "extintor"</a>
+        </p>
+      </div>`;
+  }
+}
+
+function renderNCO(p) {
+  const ahora = new Date();
+  const limite = p.fecha_limite ? new Date(p.fecha_limite) : null;
+  const horasRestantes = limite ? Math.round((limite - ahora) / 3600000) : null;
+  const urgente = horasRestantes !== null && horasRestantes < 48;
+  const expirado = horasRestantes !== null && horasRestantes < 0;
+
+  const urgenciaLabel = expirado
+    ? '<span style="color:#f87171;font-weight:700">❌ EXPIRADO</span>'
+    : urgente
+    ? `<span style="color:#fbbf24;font-weight:700">⚠️ ${horasRestantes}h restantes</span>`
+    : horasRestantes !== null
+    ? `<span style="color:#4ade80;font-weight:700">✅ ${horasRestantes}h restantes</span>`
+    : '';
+
+  const itemsHtml = p.items && p.items.length > 0
+    ? `<table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12px;">
+        <tr style="background:#0f172a;color:#94a3b8;">
+          <th style="padding:6px 8px;text-align:left;">Ítem</th>
+          <th style="padding:6px 8px;text-align:right;">Cant.</th>
+          <th style="padding:6px 8px;text-align:left;">Unidad</th>
+        </tr>
+        ${p.items.map(it => `
+          <tr style="border-bottom:1px solid #1e293b;">
+            <td style="padding:6px 8px;color:#e2e8f0;">${it.descripcion}</td>
+            <td style="padding:6px 8px;text-align:right;color:#4ade80;font-weight:700;">${it.cantidad}</td>
+            <td style="padding:6px 8px;color:#94a3b8;">${it.unidad}</td>
+          </tr>`).join('')}
+      </table>`
+    : '<p style="font-size:12px;color:#64748b;margin-top:8px;">Ver detalle en portal para ítems</p>';
+
+  return `
+    <div class="process-card" style="${urgente && !expirado ? 'border-color:#f59e0b;' : ''}${expirado ? 'opacity:0.5;' : ''}">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+        <div style="flex:1;">
+          <span style="background:#0891b2;color:white;font-size:11px;font-weight:700;padding:3px 8px;border-radius:4px;margin-right:8px;">ÍNFIMA CUANTÍA</span>
+          <span style="font-size:12px;color:#64748b;">${p.codigo}</span>
+        </div>
+        <div>${urgenciaLabel}</div>
+      </div>
+      <h3 style="font-size:15px;color:#f1f5f9;margin:10px 0 8px;">${p.descripcion}</h3>
+      <div class="process-meta" style="margin-bottom:12px;">
+        <div class="meta-item">
+          <span class="meta-label">Entidad</span>
+          <span class="meta-value" style="color:#60a5fa;">${p.entidad}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Ubicación</span>
+          <span class="meta-value">${p.provincia_canton}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Publicado</span>
+          <span class="meta-value">${p.fecha_publicacion}</span>
+        </div>
+        <div class="meta-item">
+          <span class="meta-label">Límite proforma</span>
+          <span class="meta-value" style="color:${urgente && !expirado ? '#fbbf24' : '#e2e8f0'};">${p.fecha_limite}</span>
+        </div>
+      </div>
+      ${p.funcionario ? `<p style="font-size:12px;color:#94a3b8;margin-bottom:4px;">👤 ${p.funcionario}</p>` : ''}
+      ${p.email ? `<p style="font-size:12px;color:#60a5fa;margin-bottom:8px;">📧 <a href="mailto:${p.email}" style="color:#60a5fa;">${p.email}</a></p>` : ''}
+      ${itemsHtml}
+      <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+        ${!expirado ? `<button onclick="abrirProforma(${JSON.stringify(p).replace(/"/g, '&quot;')})"
+          style="background:#7c3aed;color:white;border:none;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">
+          📄 Generar proforma
+        </button>` : ''}
+        ${p.url_detalle ? `<a href="${p.url_detalle}" target="_blank"
+          style="background:#0f172a;color:#60a5fa;border:1px solid #334155;padding:8px 16px;border-radius:8px;font-size:13px;text-decoration:none;">
+          🔗 Ver en SERCOP
+        </a>` : ''}
+        ${p.email ? `<a href="mailto:${p.email}?subject=Proforma - ${p.codigo}"
+          style="background:#0f172a;color:#4ade80;border:1px solid #334155;padding:8px 16px;border-radius:8px;font-size:13px;text-decoration:none;">
+          📧 Enviar correo
+        </a>` : ''}
+      </div>
+    </div>`;
+}
+
+// ─── PROFORMA ────────────────────────────────────────────────────────────────
+let proformaActual = null;
+
+function abrirProforma(proceso) {
+  proformaActual = proceso;
+  const modal = document.getElementById('modal-proforma');
+  const content = document.getElementById('proforma-content');
+  const hoy = new Date().toLocaleDateString('es-EC', {day:'2-digit', month:'long', year:'numeric'});
+
+  const itemsInputs = proceso.items && proceso.items.length > 0
+    ? proceso.items.map((it, i) => `
+        <tr>
+          <td style="padding:6px 8px;color:#e2e8f0;">${it.descripcion}</td>
+          <td style="padding:6px 8px;text-align:center;color:#4ade80;">${it.cantidad}</td>
+          <td style="padding:6px 8px;">${it.unidad}</td>
+          <td style="padding:4px 8px;">
+            <input type="number" id="precio-${i}" placeholder="0.00" step="0.01" min="0"
+              style="width:90px;background:#0f172a;border:1px solid #334155;color:#f1f5f9;padding:4px 8px;border-radius:6px;font-size:13px;"
+              oninput="recalcularTotal()">
+          </td>
+          <td style="padding:6px 8px;text-align:right;color:#fbbf24;font-weight:700;" id="subtotal-${i}">—</td>
+        </tr>`).join('')
+    : '<tr><td colspan="5" style="padding:12px;color:#64748b;text-align:center;">No hay ítems detallados — agrega manualmente</td></tr>';
+
+  content.innerHTML = `
+    <div style="background:#0f172a;border-radius:10px;padding:16px;margin-bottom:16px;">
+      <p style="color:#94a3b8;font-size:12px;margin-bottom:8px;">PROFORMA DE PRECIOS</p>
+      <p style="color:#f1f5f9;font-weight:700;">${proceso.entidad}</p>
+      <p style="color:#94a3b8;font-size:13px;">${proceso.provincia_canton}</p>
+      <p style="color:#94a3b8;font-size:12px;margin-top:4px;">Atención: ${proceso.funcionario || 'Funcionario encargado'}</p>
+      <p style="color:#64748b;font-size:12px;">Ref: ${proceso.codigo} | Guayaquil, ${hoy}</p>
+    </div>
+    <p style="color:#94a3b8;font-size:13px;margin-bottom:8px;">Ingresa el <strong style="color:#fbbf24;">precio unitario</strong> por cada ítem:</p>
+    <table style="width:100%;border-collapse:collapse;">
+      <tr style="background:#1e293b;color:#94a3b8;font-size:12px;">
+        <th style="padding:6px 8px;text-align:left;">Descripción</th>
+        <th style="padding:6px 8px;">Cant.</th>
+        <th style="padding:6px 8px;">Unidad</th>
+        <th style="padding:6px 8px;">P. Unitario</th>
+        <th style="padding:6px 8px;text-align:right;">Subtotal</th>
+      </tr>
+      ${itemsInputs}
+      <tr style="border-top:2px solid #334155;">
+        <td colspan="4" style="padding:8px;text-align:right;color:#94a3b8;font-weight:700;">TOTAL (sin IVA):</td>
+        <td style="padding:8px;text-align:right;color:#4ade80;font-size:18px;font-weight:800;" id="proforma-total">$0.00</td>
+      </tr>
+    </table>
+    <div style="margin-top:12px;background:#0f172a;border-radius:8px;padding:10px;">
+      <p style="font-size:12px;color:#64748b;">Plazo de ejecución: <input type="text" id="plazo-ejecucion" value="5 días hábiles" style="background:transparent;border:none;border-bottom:1px solid #334155;color:#e2e8f0;font-size:12px;width:140px;"></p>
+      <p style="font-size:12px;color:#64748b;margin-top:4px;">Forma de pago: <input type="text" id="forma-pago" value="Transferencia bancaria contra entrega" style="background:transparent;border:none;border-bottom:1px solid #334155;color:#e2e8f0;font-size:12px;width:240px;"></p>
+    </div>`;
+
+  modal.style.display = 'block';
+}
+
+function recalcularTotal() {
+  if (!proformaActual || !proformaActual.items) return;
+  let total = 0;
+  proformaActual.items.forEach((it, i) => {
+    const precio = parseFloat(document.getElementById(`precio-${i}`)?.value || 0);
+    const cant = parseFloat(it.cantidad) || 1;
+    const sub = precio * cant;
+    total += sub;
+    const el = document.getElementById(`subtotal-${i}`);
+    if (el) el.textContent = sub > 0 ? '$' + sub.toFixed(2) : '—';
+  });
+  document.getElementById('proforma-total').textContent = '$' + total.toFixed(2);
+}
+
+function copiarProforma() {
+  if (!proformaActual) return;
+  const hoy = new Date().toLocaleDateString('es-EC', {day:'2-digit', month:'long', year:'numeric'});
+  const plazo = document.getElementById('plazo-ejecucion')?.value || '5 días hábiles';
+  const pago = document.getElementById('forma-pago')?.value || 'Transferencia bancaria';
+
+  let lineas = [
+    `PROFORMA DE PRECIOS`,
+    ``,
+    `Guayaquil, ${hoy}`,
+    ``,
+    `Señores:`,
+    `${proformaActual.entidad}`,
+    `${proformaActual.provincia_canton}`,
+    `Atención: ${proformaActual.funcionario || 'Funcionario encargado'}`,
+    `Referencia: ${proformaActual.codigo}`,
+    ``,
+    `Estimados señores,`,
+    `Por medio de la presente, PREVIFUEGO se permite presentar la siguiente proforma de precios:`,
+    ``,
+  ];
+
+  let total = 0;
+  if (proformaActual.items && proformaActual.items.length > 0) {
+    lineas.push(`${'DESCRIPCIÓN'.padEnd(50)} ${'CANT'.padStart(6)} ${'P.UNIT'.padStart(10)} ${'SUBTOTAL'.padStart(12)}`);
+    lineas.push('─'.repeat(82));
+    proformaActual.items.forEach((it, i) => {
+      const precio = parseFloat(document.getElementById(`precio-${i}`)?.value || 0);
+      const cant = parseFloat(it.cantidad) || 1;
+      const sub = precio * cant;
+      total += sub;
+      const desc = it.descripcion.substring(0, 49).padEnd(50);
+      lineas.push(`${desc} ${String(it.cantidad).padStart(6)} ${('$'+precio.toFixed(2)).padStart(10)} ${('$'+sub.toFixed(2)).padStart(12)}`);
+    });
+    lineas.push('─'.repeat(82));
+    lineas.push(`${'TOTAL (sin IVA):'.padEnd(70)} ${('$'+total.toFixed(2)).padStart(12)}`);
+  }
+
+  lineas.push(``, `Plazo de ejecución: ${plazo}`);
+  lineas.push(`Forma de pago: ${pago}`);
+  lineas.push(``, `Atentamente,`);
+  lineas.push(`PREVIFUEGO — Recarga y Mantenimiento de Extintores`);
+  lineas.push(`RUC: 0952773976001`);
+
+  navigator.clipboard.writeText(lineas.join('\n')).then(() => {
+    mostrarToast('✅ Proforma copiada al portapapeles — pégala en el correo');
+  });
+}
+
+function cerrarProforma() {
+  document.getElementById('modal-proforma').style.display = 'none';
+  proformaActual = null;
+}
+
+// Cargar NCO al inicio
+window.addEventListener('load', () => {
+  cargarNCO();
 });
 </script>
 
