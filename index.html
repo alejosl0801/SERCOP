@@ -709,7 +709,9 @@ function getTipoFromOcds(item) {
   if (t.includes('INFIMA') || t.includes('ÍNFIMA') || t === 'IC') return 'IC';
   if (t.includes('LICITACION') || t.includes('LICITACIÓN') || t === 'LC') return 'LC';
   if (t.includes('DIRECTA') || t === 'CD') return 'CD';
-  return t || 'OTRO';
+  if (t.includes('REGIMEN') || t.includes('RÉGIMEN') || t === 'RE') return 'RE';
+  if (t.includes('OBRA') || t === 'LO') return 'LO';
+  return 'OTRO';
 }
 
 function renderCard(p) {
