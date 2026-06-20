@@ -759,7 +759,7 @@ function renderCard(p) {
     ? 'https://modulocomprascorporativas.compraspublicas.gob.ec/ProcesoContratacion/compras/PC/buscarProceso.cpe'
     : 'https://www.compraspublicas.gob.ec/ProcesoContratacion/compras/PC/buscarProceso.cpe';
   const urlPortal = `${portalBase}?codigoProceso=${encodeURIComponent(codigo)}&sg=1`;
-  const urlDatos = `https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/procedimientos/${encodeURIComponent(ocid)}`;
+  const urlDatos = `https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/ocds/${encodeURIComponent(ocid)}`;
 
   // Campos con manejo defensivo de null/undefined
   const descripcion = (p.description && p.description !== p.title ? p.description : null) || p.title || codigo;
