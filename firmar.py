@@ -35,16 +35,18 @@ style = QRStampStyle(
         "Validar únicamente en FirmaEC.\n"
         "Firmado electrónicamente por:\n"
         "ALEJANDRO ALBERTO LOPEZ MEJIA\n"
-        "Fecha: %(ts)s UTC"
+        "Fecha: %(ts)s"
     ),
     background_opacity=1,
+    timestamp_format="%Y-%m-%d %H:%M:%S UTC",
 )
 
 # Página 3 (índice 2) = carta anti-lavado
-# Coordenadas en puntos PDF (origen abajo-izquierda, A4 = 595x842)
-# Caja de firma en la carta: lado izquierdo, 60% ancho = ~357pts
-# Posición vertical: parte inferior de la página, sobre el margen
-STAMP_BOX = (42, 195, 399, 320)  # x1, y1, x2, y2
+# Coordenadas medidas del PDF renderizado por WeasyPrint (top-down):
+#   - Firma box: y=460 a y=595, x=90 a x=450
+# Convertido a PDF bottom-up (página 841.9pt):
+#   y_bottom = 841.9 - 595 = 247,  y_top = 841.9 - 460 = 382
+STAMP_BOX = (90, 275, 407, 373)  # x1, y1, x2, y2 (bottom-up) — medido del PDF
 
 with open(PDF_UNSIGNED, "rb") as inf:
     writer = IncrementalPdfFileWriter(inf)
