@@ -80,7 +80,7 @@ def enviar_email(asunto: str, cuerpo_html: str, cuerpo_texto: str):
         log(f"❌ Error enviando email: {e}")
         return False
 
-def build_email_ncos(nuevos: list[dict]) -> tuple[str, str]:
+def build_email_ncos(nuevos: list[dict]) -> tuple[str, str, str]:
     """Construye cuerpo HTML y texto plano del email de alerta."""
     n = len(nuevos)
     asunto = f"🔔 PREVIFUEGO — {n} proceso{'s' if n>1 else ''} nuevo{'s' if n>1 else ''} en SERCOP"
