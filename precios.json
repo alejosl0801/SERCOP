@@ -1,6 +1,8 @@
 {
-  "version": "1.0",
+  "version": "2.0",
   "moneda": "USD",
+  "notas": "Las recargas usan precio_por_libra * capacidad_lbs. Las adquisiciones tienen precio fijo por tener costo de cilindro variable.",
+
   "proveedor": {
     "nombre": "PREVIFUEGO",
     "ruc": "0952773976001",
@@ -10,127 +12,84 @@
     "telefono": "",
     "direccion": "Guayaquil, Ecuador"
   },
-  "catalogo": [
-    {
-      "id": "recarga_pqs_10",
-      "tipo": "recarga",
-      "agente": "PQS",
-      "capacidad_lbs": 10,
-      "descripcion": "Recarga de extintor PQS 10 lbs",
-      "keywords": ["recarga", "pqs", "10 lbs", "10lbs", "10lb", "polvo quimico seco"],
-      "unidad": "Unidad",
-      "precio_unitario": 8.00,
-      "notas": "Incluye prueba hidrostática y etiqueta"
-    },
-    {
-      "id": "recarga_pqs_20",
-      "tipo": "recarga",
-      "agente": "PQS",
-      "capacidad_lbs": 20,
-      "descripcion": "Recarga de extintor PQS 20 lbs",
-      "keywords": ["recarga", "pqs", "20 lbs", "20lbs", "20lb"],
-      "unidad": "Unidad",
-      "precio_unitario": 18.00,
-      "notas": ""
-    },
-    {
-      "id": "recarga_pqs_50",
-      "tipo": "recarga",
-      "agente": "PQS",
-      "capacidad_lbs": 50,
-      "descripcion": "Recarga de extintor PQS 50 lbs",
-      "keywords": ["recarga", "pqs", "50 lbs", "50lbs", "50lb"],
-      "unidad": "Unidad",
-      "precio_unitario": 40.00,
-      "notas": ""
-    },
-    {
-      "id": "recarga_co2_10",
-      "tipo": "recarga",
-      "agente": "CO2",
-      "capacidad_lbs": 10,
-      "descripcion": "Recarga de extintor CO2 10 lbs",
-      "keywords": ["recarga", "co2", "10 lbs", "10lbs", "10lb", "dioxido de carbono", "dióxido"],
-      "unidad": "Unidad",
-      "precio_unitario": 8.00,
-      "notas": "Sin manómetro — agente CO2"
-    },
-    {
-      "id": "recarga_co2_20",
-      "tipo": "recarga",
-      "agente": "CO2",
-      "capacidad_lbs": 20,
-      "descripcion": "Recarga de extintor CO2 20 lbs",
-      "keywords": ["recarga", "co2", "20 lbs", "20lbs", "20lb"],
-      "unidad": "Unidad",
-      "precio_unitario": 18.00,
-      "notas": ""
-    },
+
+  "tarifas_por_libra": {
+    "recarga_PQS": 0.70,
+    "recarga_CO2": 0.70
+  },
+
+  "adquisiciones": [
     {
       "id": "adq_pqs_10",
-      "tipo": "adquisicion",
       "agente": "PQS",
       "capacidad_lbs": 10,
       "descripcion": "Extintor PQS 10 lbs (nuevo)",
-      "keywords": ["adquisicion", "adquisición", "extintor", "pqs", "10 lbs", "10lbs", "nuevo"],
-      "unidad": "Unidad",
       "precio_unitario": 16.00,
       "notas": "Con manómetro, certificado UL/FM"
     },
     {
       "id": "adq_pqs_20",
-      "tipo": "adquisicion",
       "agente": "PQS",
       "capacidad_lbs": 20,
       "descripcion": "Extintor PQS 20 lbs (nuevo)",
-      "keywords": ["adquisicion", "adquisición", "extintor", "pqs", "20 lbs", "20lbs", "nuevo"],
-      "unidad": "Unidad",
       "precio_unitario": 22.00,
       "notas": ""
     },
     {
       "id": "adq_pqs_50",
-      "tipo": "adquisicion",
       "agente": "PQS",
       "capacidad_lbs": 50,
       "descripcion": "Extintor PQS 50 lbs (nuevo)",
-      "keywords": ["adquisicion", "adquisición", "extintor", "pqs", "50 lbs", "50lbs", "nuevo"],
-      "unidad": "Unidad",
       "precio_unitario": 168.00,
       "notas": ""
     },
     {
       "id": "adq_pqs_150",
-      "tipo": "adquisicion",
       "agente": "PQS",
       "capacidad_lbs": 150,
       "descripcion": "Extintor PQS 150 lbs (nuevo)",
-      "keywords": ["adquisicion", "adquisición", "extintor", "pqs", "150 lbs", "150lbs", "nuevo"],
-      "unidad": "Unidad",
       "precio_unitario": 220.00,
       "notas": ""
     },
     {
       "id": "adq_co2_10",
-      "tipo": "adquisicion",
       "agente": "CO2",
       "capacidad_lbs": 10,
       "descripcion": "Extintor CO2 10 lbs (nuevo)",
-      "keywords": ["adquisicion", "adquisición", "extintor", "co2", "10 lbs", "10lbs", "nuevo", "dioxido"],
-      "unidad": "Unidad",
       "precio_unitario": 39.00,
       "notas": "Sin manómetro — agente CO2"
     },
     {
       "id": "adq_co2_20",
-      "tipo": "adquisicion",
       "agente": "CO2",
       "capacidad_lbs": 20,
       "descripcion": "Extintor CO2 20 lbs (nuevo)",
-      "keywords": ["adquisicion", "adquisición", "extintor", "co2", "20 lbs", "20lbs", "nuevo"],
-      "unidad": "Unidad",
       "precio_unitario": 88.00,
       "notas": ""
+    },
+    {
+      "id": "adq_co2_50",
+      "agente": "CO2",
+      "capacidad_lbs": 50,
+      "descripcion": "Extintor CO2 50 lbs (nuevo)",
+      "precio_unitario": 320.00,
+      "notas": "Sin manómetro — agente CO2"
+    },
+    {
+      "id": "adq_agua_2.5",
+      "agente": "AGUA",
+      "capacidad_lbs": 2.5,
+      "descripcion": "Extintor de agua 2.5 galones (nuevo)",
+      "precio_unitario": 45.00,
+      "notas": "Para fuegos clase A"
+    },
+    {
+      "id": "adq_afff_2.5",
+      "agente": "AFFF",
+      "capacidad_lbs": 2.5,
+      "descripcion": "Extintor AFFF/espuma 2.5 galones (nuevo)",
+      "precio_unitario": 55.00,
+      "notas": "Para fuegos clase A y B"
     }
   ]
 }
