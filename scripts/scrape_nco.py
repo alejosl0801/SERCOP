@@ -65,12 +65,15 @@ def scrape_with_playwright():
         rows = page.locator("table tbody tr").all()
         print(f"Filas encontradas: {len(rows)}", file=sys.stderr)
 
-        for row in rows:
+        for i, row in enumerate(rows):
             cells = row.locator("td").all()
             if len(cells) < 6:
+                print(f"Fila {i}: solo {len(cells)} celdas, omitida", file=sys.stderr)
                 continue
 
             texts = [c.inner_text().strip() for c in cells]
+            if i < 5:
+                print(f"Fila {i} ({len(texts)} cols): {texts[:8]}", file=sys.stderr)
             tipo          = texts[0] if len(texts) > 0 else ""
             codigo        = texts[1] if len(texts) > 1 else ""
             fecha_pub     = texts[2] if len(texts) > 2 else ""
@@ -81,6 +84,7 @@ def scrape_with_playwright():
             entidad       = texts[7] if len(texts) > 7 else ""
 
             if not is_guayas(prov_canton) and not is_guayas(entidad):
+                print(f"  -> No Guayas: prov={prov_canton!r} entidad={entidad!r}", file=sys.stderr)
                 continue
             if not is_extintor(descripcion):
                 continue
