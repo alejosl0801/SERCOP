@@ -4,6 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>SERCOP Monitor — Previfuego</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#ef4444">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Previfuego">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -1107,23 +1113,65 @@ async function buscar(page = 1) {
   }
 }
 
-// ===================== SISTEMA DE ALERTAS =====================
+// ===================== SERVICE WORKER + ALERTAS PWA =====================
+let swReg = null;
 let alertaTimer = null;
 const ALERTA_KEY = 'sercop_alerta_activa';
-const PROCESOS_VISTOS_KEY = 'sercop_procesos_vistos';
 
-function getProcesosVistos() {
-  try { return JSON.parse(localStorage.getItem(PROCESOS_VISTOS_KEY) || '[]'); } catch { return []; }
+// Registrar Service Worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').then(reg => {
+    swReg = reg;
+    console.log('SW registrado:', reg.scope);
+  }).catch(e => console.warn('SW no disponible:', e));
+
+  // Escuchar mensajes del SW (nuevos NCOs encontrados en background)
+  navigator.serviceWorker.addEventListener('message', e => {
+    if (e.data?.type === 'NUEVOS_NCO') {
+      mostrarToast(`🚨 ¡${e.data.count} nuevo(s) proceso(s) en Guayas! Actualiza la app.`);
+      cargarNCO();
+    }
+  });
 }
 
-function guardarProcesosVistos(ids) {
-  localStorage.setItem(PROCESOS_VISTOS_KEY, JSON.stringify(ids));
+async function pedirPermisoNotificaciones() {
+  if (!('Notification' in window)) return false;
+  if (Notification.permission === 'granted') return true;
+  if (Notification.permission === 'denied') {
+    mostrarToast('⚠️ Notificaciones bloqueadas. Actívalas en Configuración del navegador.');
+    return false;
+  }
+  const perm = await Notification.requestPermission();
+  return perm === 'granted';
+}
+
+async function activarPeriodicSync(minutos) {
+  if (!swReg) return false;
+  if (!('periodicSync' in swReg)) return false;
+  try {
+    const estado = await navigator.permissions.query({ name: 'periodic-background-sync' });
+    if (estado.state !== 'granted') return false;
+    await swReg.periodicSync.register('check-nco', {
+      minInterval: minutos * 60 * 1000,
+    });
+    return true;
+  } catch { return false; }
 }
 
 async function verificarNuevosEnGuayas() {
-  const keywords = ['extintores', 'recarga extintores', 'mantenimiento extintores', 'proteccion incendios'];
+  // Delegar al SW si está disponible
+  if (swReg?.active) {
+    swReg.active.postMessage({ type: 'CHECK_NOW' });
+    const ahora = new Date().toLocaleTimeString('es-EC', {hour:'2-digit', minute:'2-digit'});
+    document.getElementById('alerta-estado').textContent =
+      `✅ Activa — última revisión: ${ahora}`;
+    return;
+  }
+
+  // Fallback: revisar directamente desde la página
+  const keywords = ['extintores', 'recarga extintores'];
+  const vistos = JSON.parse(localStorage.getItem('nco_vistos') || '[]');
   let nuevos = [];
-  const vistos = getProcesosVistos();
 
   for (const kw of keywords) {
     try {
@@ -1131,54 +1179,35 @@ async function verificarNuevosEnGuayas() {
       const res = await fetch(`${API_BASE}?${params}`);
       if (!res.ok) continue;
       const data = await res.json();
-      const items = (data.data || []).filter(p => {
-        const region = (p.region || '').toUpperCase();
-        const locality = (p.locality || '').toUpperCase();
-        return region.includes('GUAYAS') || locality.includes('GUAYAS') ||
-               locality.includes('GUAYAQUIL') || region.includes('GUAYAQUIL');
-      });
-      items.forEach(p => {
+      (data.data || []).filter(p => {
+        const r = (p.region || '').toUpperCase();
+        const l = (p.locality || '').toUpperCase();
+        return r.includes('GUAYAS') || l.includes('GUAYAS') || l.includes('GUAYAQUIL');
+      }).forEach(p => {
         const id = p.ocid || String(p.id);
-        if (!vistos.includes(id)) nuevos.push(p);
+        if (!vistos.includes(id) && !nuevos.find(x => (x.ocid||x.id)===(p.ocid||p.id)))
+          nuevos.push(p);
       });
     } catch {}
   }
 
-  // Eliminar duplicados
-  nuevos = nuevos.filter((p, i, arr) =>
-    arr.findIndex(x => (x.ocid || x.id) === (p.ocid || p.id)) === i
-  );
-
   if (nuevos.length > 0) {
-    // Guardar como vistos
-    const idsNuevos = nuevos.map(p => p.ocid || String(p.id));
-    guardarProcesosVistos([...vistos, ...idsNuevos]);
+    const ids = nuevos.map(p => p.ocid || String(p.id));
+    localStorage.setItem('nco_vistos', JSON.stringify([...vistos, ...ids]));
 
-    // Notificación del navegador
     if (Notification.permission === 'granted') {
-      nuevos.forEach(p => {
-        const n = new Notification('🔥 Nuevo proceso en Guayas — SERCOP', {
-          body: `${p.description || p.title || p.ocid}\n${p.buyer || ''} | $${parseFloat(p.amount||0).toLocaleString('es-EC')}`,
-          icon: 'https://alejosl0801.github.io/SERCOP/favicon.ico',
-          tag: p.ocid || String(p.id),
+      nuevos.slice(0, 3).forEach(p => {
+        new Notification('🔥 Nuevo proceso en Guayas — SERCOP', {
+          body: `${p.description || p.title}\n${p.buyer || ''}`,
+          icon: 'icons/icon-192.png',
+          tag:  p.ocid || String(p.id),
         });
-        n.onclick = () => {
-          window.focus();
-          window.open(`https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/ocds/${encodeURIComponent(p.ocid)}`, '_blank');
-        };
       });
     }
-
-    // Toast en pantalla
-    mostrarToast(`🚨 ${nuevos.length} nuevo(s) proceso(s) en Guayas! Revísalos ahora.`);
-
-    // Mostrar en la herramienta
-    document.getElementById('input-provincia').value = 'GUAYAS';
-    document.getElementById('input-keyword').value = 'extintores';
+    mostrarToast(`🚨 ${nuevos.length} nuevo(s) proceso(s) en Guayas!`);
     buscar(1);
   }
 
-  // Actualizar estado
   const ahora = new Date().toLocaleTimeString('es-EC', {hour:'2-digit', minute:'2-digit'});
   document.getElementById('alerta-estado').textContent =
     `✅ Activa — última revisión: ${ahora}${nuevos.length > 0 ? ` — ¡${nuevos.length} nuevo(s)!` : ' — sin novedades'}`;
@@ -1188,33 +1217,34 @@ async function toggleAlerta() {
   const btn = document.getElementById('btn-alerta');
 
   if (alertaTimer) {
-    // Desactivar
     clearInterval(alertaTimer);
     alertaTimer = null;
     localStorage.removeItem(ALERTA_KEY);
     btn.textContent = '🔔 Activar alerta';
     btn.style.background = '#7c3aed';
-    document.getElementById('alerta-estado').textContent = 'Inactiva — actívala para recibir notificaciones cuando aparezca un proceso en tu zona';
+    document.getElementById('alerta-estado').textContent =
+      'Inactiva — actívala para recibir notificaciones cuando aparezca un proceso en tu zona';
     return;
   }
 
-  // Pedir permiso de notificaciones
-  if (Notification.permission === 'default') {
-    const permiso = await Notification.requestPermission();
-    if (permiso !== 'granted') {
-      mostrarToast('⚠️ Activa las notificaciones del navegador para recibir alertas');
-    }
+  const tienePermiso = await pedirPermisoNotificaciones();
+  if (!tienePermiso) {
+    mostrarToast('⚠️ Sin permiso de notificaciones — las alertas solo se verán dentro de la app');
   }
 
-  // Activar
   const minutos = parseInt(document.getElementById('alerta-intervalo').value);
   localStorage.setItem(ALERTA_KEY, minutos);
-
   btn.textContent = '🔕 Desactivar alerta';
   btn.style.background = '#dc2626';
-  document.getElementById('alerta-estado').textContent = `✅ Activa — revisando cada ${minutos >= 60 ? (minutos/60)+'h' : minutos+'min'} — esperando primera revisión...`;
 
-  // Revisar inmediatamente y luego cada X minutos
+  // Intentar Periodic Background Sync (funciona con la app cerrada en Android)
+  activarPeriodicSync(minutos).then(ok => {
+    const modo = ok ? 'background activo (funciona con app cerrada)' : 'activa mientras la app está abierta';
+    document.getElementById('alerta-estado').textContent =
+      `✅ Alerta ${modo} — revisando cada ${minutos >= 60 ? (minutos/60)+'h' : minutos+'min'}`;
+  });
+
+  // También revisar en intervalo mientras la app está abierta
   verificarNuevosEnGuayas();
   alertaTimer = setInterval(verificarNuevosEnGuayas, minutos * 60 * 1000);
 }
@@ -1223,9 +1253,7 @@ async function toggleAlerta() {
 window.addEventListener('load', () => {
   buscar(1);
   const minGuardados = localStorage.getItem(ALERTA_KEY);
-  if (minGuardados) {
-    setTimeout(() => toggleAlerta(), 2000);
-  }
+  if (minGuardados) setTimeout(() => toggleAlerta(), 2000);
 });
 
 document.addEventListener('DOMContentLoaded', () => {
