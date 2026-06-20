@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+output/
+nco-vistos.json
+procesados.json
+monitor.log
+*.p12
