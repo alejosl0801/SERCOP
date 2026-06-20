@@ -884,28 +884,39 @@ async function buscar(page = 1) {
     });
 
     const res = await fetch(`${API_BASE}?${params}`);
-
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
     const data = await res.json();
-    // La respuesta tiene: total, page, pages, data (array)
+
     todosItems = data.data || data.results || [];
     totalGlobal = data.total || todosItems.length;
     pagesGlobal = data.pages || Math.ceil(totalGlobal / 20) || 1;
 
+    // Si hay filtro de provincia, traer TODAS las páginas para no perder resultados
+    if (provinciaFiltro && pagesGlobal > 1) {
+      document.getElementById('results-title').textContent = `Buscando en todas las páginas... (${pagesGlobal} páginas)`;
+      const fetches = [];
+      for (let p2 = 2; p2 <= Math.min(pagesGlobal, 10); p2++) {
+        const pp = new URLSearchParams({ year: AÑO_ACTUAL, search: keyword, page: p2 });
+        fetches.push(fetch(`${API_BASE}?${pp}`).then(r => r.ok ? r.json() : null));
+      }
+      const extras = await Promise.all(fetches);
+      extras.forEach(d => {
+        if (d) todosItems = [...todosItems, ...(d.data || d.results || [])];
+      });
+    }
+
     // Si hay pocos resultados en año actual, también buscar año anterior
-    if (todosItems.length < 5 && page === 1) {
+    if (todosItems.length < 5 && page === 1 && !provinciaFiltro) {
       const params2 = new URLSearchParams({ year: AÑO_ACTUAL - 1, search: keyword, page: 1 });
       const res2 = await fetch(`${API_BASE}?${params2}`);
       if (res2.ok) {
         const data2 = await res2.json();
-        const items2 = data2.data || data2.results || [];
-        todosItems = [...todosItems, ...items2];
+        todosItems = [...todosItems, ...(data2.data || data2.results || [])];
         totalGlobal += (data2.total || 0);
       }
     }
 
-    // Filtrar por provincia si el usuario seleccionó una
+    // Filtrar por provincia
     if (provinciaFiltro) {
       todosItems = todosItems.filter(p => {
         const r = (p.region || '').toUpperCase();
@@ -913,6 +924,7 @@ async function buscar(page = 1) {
         return r.includes(provinciaFiltro) || l.includes(provinciaFiltro);
       });
       totalGlobal = todosItems.length;
+      pagesGlobal = 1;
     }
 
     currentPage = page;
