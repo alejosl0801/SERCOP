@@ -714,20 +714,24 @@ function getTipoFromOcds(item) {
 function renderCard(p) {
   const tipoKey = getTipoFromOcds(p);
   const tipo = TIPOS[tipoKey] || { label: p.internal_type || 'Otro', css: 'type-other' };
-  // ocid es el identificador del proceso en OCDS, ej: ocds-03ad3f-XXXXXXXX
-  const ocid = p.ocid || '';
-  const codigoUrl = ocid.replace('ocds-03ad3f-', '');
-  const url = codigoUrl
-    ? `https://www.compraspublicas.gob.ec/ProcesoContratacion/compras/EP/informacionProcesoContratacion2.cpe?idSoliCompra=${codigoUrl}`
-    : `https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/procedimientos/${ocid}`;
 
-  const titulo = p.title || p.description || p.descripcion || 'Sin descripción';
-  const entidad = p.buyerName || p.nombre_entidad || '—';
+  const ocid = p.ocid || '';
+  // El código de proceso es el OCID sin el prefijo "ocds-5wno2w-"
+  const codigo = ocid.replace(/^ocds-[a-z0-9]+-/, '') || p.id || '—';
+
+  // URL correcta: buscar por código en el portal de compras públicas
+  const urlPortal = `https://www.compraspublicas.gob.ec/ProcesoContratacion/compras/PC/buscarProceso.cpe?codigoProceso=${encodeURIComponent(codigo)}&sg=1`;
+  const urlDatos = `https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/procedimientos/${encodeURIComponent(ocid)}`;
+
+  // Intentar todos los campos posibles de la respuesta OCDS
+  const titulo = p.title || p.description || p.nombre || codigo || 'Sin descripción';
+  const entidad = p.buyerName || p.buyer_name || p.buyer?.name || p.nombre_entidad || p.entidad || '';
   const fecha = p.date ? new Date(p.date).toLocaleDateString('es-EC') : '—';
   const anio = p.year || '—';
+  const esSingle = p.single_provider === true || p.single_provider === 'true' || p.single_provider === 1;
 
   return `
-    <div class="process-card" onclick="window.open('${url}', '_blank')">
+    <div class="process-card" onclick="window.open('${urlPortal}', '_blank')">
       <div class="process-card-header">
         <span class="process-type-badge ${tipo.css}">${tipo.label}</span>
         <span class="process-title">${titulo}</span>
@@ -735,24 +739,27 @@ function renderCard(p) {
       <div class="process-meta">
         <div class="meta-item">
           <span class="meta-label">Código</span>
-          <span class="meta-value">${codigoUrl || ocid || '—'}</span>
+          <span class="meta-value" style="font-size:12px">${codigo}</span>
         </div>
         <div class="meta-item">
           <span class="meta-label">Año</span>
           <span class="meta-value">${anio}</span>
         </div>
         <div class="meta-item">
-          <span class="meta-label">Fecha</span>
+          <span class="meta-label">Fecha publicación</span>
           <span class="meta-value">${fecha}</span>
         </div>
         <div class="meta-item">
           <span class="meta-label">Proveedor único</span>
-          <span class="meta-value ${p.single_provider ? 'danger' : 'highlight'}">${p.single_provider ? 'Sí (cerrado)' : 'No ✅'}</span>
+          <span class="meta-value ${esSingle ? 'danger' : 'highlight'}">${esSingle ? '⚠️ Sí' : '✅ No'}</span>
         </div>
       </div>
       <div class="process-footer">
-        <span class="entidad-name">🏛️ ${entidad}</span>
-        <a class="btn-ver" href="${url}" target="_blank" onclick="event.stopPropagation()">Ver proceso →</a>
+        <span class="entidad-name">🏛️ ${entidad || 'Ver en portal →'}</span>
+        <div style="display:flex;gap:8px">
+          <a class="btn-ver" href="${urlDatos}" target="_blank" onclick="event.stopPropagation()">Datos OCDS</a>
+          <a class="btn-ver" href="${urlPortal}" target="_blank" onclick="event.stopPropagation()" style="background:#ef4444;color:white;border-color:#ef4444">Ver proceso →</a>
+        </div>
       </div>
     </div>
   `;
