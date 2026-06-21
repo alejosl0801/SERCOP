@@ -204,9 +204,13 @@ def detectar_nuevos() -> list[dict]:
 
     return nuevos
 
-# ── Auto-proforma ─────────────────────────────────────────────────────────────
+# ── Auto-proforma + upload ────────────────────────────────────────────────────
 
-def auto_proforma(nuevos: list[dict]):
+SERCOP_USER = os.environ.get("SERCOP_USER", "")
+SERCOP_PASS = os.environ.get("SERCOP_PASS", "")
+
+def auto_proforma(nuevos: list[dict], auto_upload: bool = False):
+    import re as _re
     for nco in nuevos:
         codigo = nco.get("codigo", "")
         log(f"📄 Generando proforma para {codigo}...")
@@ -215,14 +219,42 @@ def auto_proforma(nuevos: list[dict]):
             capture_output=True, text=True, cwd=str(BASE_DIR),
             env={**os.environ}
         )
-        if result.returncode == 0:
-            log(f"✅ Proforma generada: {codigo}")
-        else:
+        if result.returncode != 0:
             log(f"⚠ Proforma con advertencias ({codigo}):\n{result.stderr[-400:]}")
+            continue
+
+        log(f"✅ Proforma generada: {codigo}")
+
+        if not auto_upload:
+            continue
+        if not SERCOP_USER or not SERCOP_PASS:
+            log("⚠ SERCOP_USER/SERCOP_PASS no configurados — upload omitido")
+            continue
+
+        # Encontrar el PDF firmado generado
+        safe = _re.sub(r"[^\w\-]", "_", codigo)
+        pdf_path = BASE_DIR / "output" / f"Proforma_{safe}_PREVIFUEGO_signed.pdf"
+        if not pdf_path.exists():
+            log(f"⚠ PDF firmado no encontrado: {pdf_path.name} — upload omitido")
+            continue
+
+        log(f"🌐 Subiendo proforma al portal SERCOP...")
+        up_result = subprocess.run(
+            [sys.executable, str(BASE_DIR / "scripts" / "upload_proforma.py"),
+             "--nco", codigo, "--pdf", str(pdf_path)],
+            capture_output=True, text=True, cwd=str(BASE_DIR),
+            env={**os.environ}
+        )
+        if up_result.returncode == 0:
+            log(f"✅ Proforma subida al portal: {codigo}")
+        elif up_result.returncode == 2:
+            log(f"⚠ Upload manual requerido ({codigo}) — sección de carga no encontrada")
+        else:
+            log(f"❌ Error en upload ({codigo}):\n{up_result.stdout[-400:]}")
 
 # ── Ciclo principal ───────────────────────────────────────────────────────────
 
-def ciclo(auto_gen: bool = False):
+def ciclo(auto_gen: bool = False, auto_upload: bool = False):
     log("━" * 50)
     ok = correr_scraper()
     if not ok:
@@ -239,7 +271,7 @@ def ciclo(auto_gen: bool = False):
     enviar_email(asunto, html, texto)
 
     if auto_gen:
-        auto_proforma(nuevos)
+        auto_proforma(nuevos, auto_upload)
 
 
 def main():
@@ -247,21 +279,23 @@ def main():
     parser.add_argument("--loop",          action="store_true", help="Correr en bucle indefinido")
     parser.add_argument("--intervalo",     type=int, default=120, help="Minutos entre ciclos (default: 120)")
     parser.add_argument("--auto-proforma", action="store_true", help="Generar proforma automáticamente al detectar nuevo NCO")
+    parser.add_argument("--auto-upload",   action="store_true", help="Subir proforma al portal SERCOP automáticamente (requiere SERCOP_USER y SERCOP_PASS)")
     args = parser.parse_args()
 
     log("🚀 Monitor PREVIFUEGO iniciado")
     log(f"   Email destino : {EMAIL_DEST}")
     log(f"   Auto-proforma : {'sí' if args.auto_proforma else 'no'}")
+    log(f"   Auto-upload   : {'sí' if args.auto_upload else 'no'}")
     if args.loop:
         log(f"   Intervalo     : cada {args.intervalo} minutos")
 
-    ciclo(args.auto_proforma)
+    ciclo(args.auto_proforma, args.auto_upload)
 
     if args.loop:
         while True:
             log(f"💤 Próxima verificación en {args.intervalo} minutos...")
             time.sleep(args.intervalo * 60)
-            ciclo(args.auto_proforma)
+            ciclo(args.auto_proforma, args.auto_upload)
 
 
 if __name__ == "__main__":

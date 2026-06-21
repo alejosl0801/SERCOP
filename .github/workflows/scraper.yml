@@ -1,0 +1,48 @@
+name: NCO Scraper — SERCOP Guayas
+
+on:
+  schedule:
+    # Cada hora de lunes a viernes, 6am-9pm hora Ecuador (UTC-5 → UTC 11-02)
+    - cron: '0 11-23,0-2 * * 1-5'
+  workflow_dispatch:   # Permite correrlo manualmente desde GitHub
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Instalar dependencias
+        run: |
+          pip install playwright
+          playwright install chromium --with-deps
+
+      - name: Correr scraper NCO
+        run: python3 scripts/scrape_nco.py
+        timeout-minutes: 10
+
+      - name: Commit nco-guayas.json si cambió
+        run: |
+          git config user.name  "PREVIFUEGO Bot"
+          git config user.email "alejosl0801@gmail.com"
+          git add nco-guayas.json
+          if git diff --cached --quiet; then
+            echo "Sin cambios en nco-guayas.json"
+          else
+            git commit -m "bot: actualizar nco-guayas.json $(date -u '+%Y-%m-%d %H:%M UTC')"
+            git push
+          fi
