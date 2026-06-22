@@ -4,7 +4,7 @@ on:
   schedule:
     # Cada hora de lunes a viernes, 6am-9pm hora Ecuador (UTC-5 → UTC 11-02)
     - cron: '0 11-23,0-2 * * 1-5'
-  workflow_dispatch:   # Permite correrlo manualmente desde GitHub
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -28,7 +28,7 @@ jobs:
 
       - name: Instalar dependencias
         run: |
-          pip install playwright
+          pip install playwright pymupdf
           playwright install chromium --with-deps
 
       - name: Correr scraper NCO
@@ -46,3 +46,35 @@ jobs:
             git commit -m "bot: actualizar nco-guayas.json $(date -u '+%Y-%m-%d %H:%M UTC')"
             git push
           fi
+
+      - name: Notificar por email si hay procesos nuevos
+        if: success()
+        env:
+          GMAIL_USER:     ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASS: ${{ secrets.GMAIL_APP_PASS }}
+        run: |
+          python3 -c "
+import json, os, sys
+from pathlib import Path
+
+data = json.loads(Path('nco-guayas.json').read_text())
+vistos_path = Path('nco-vistos-ci.json')
+vistos = set(json.loads(vistos_path.read_text())) if vistos_path.exists() else set()
+nuevos = [p for p in data.get('procesos', []) if p.get('codigo') not in vistos]
+
+if not nuevos:
+    print('Sin procesos nuevos')
+    sys.exit(0)
+
+print(f'{len(nuevos)} proceso(s) nuevo(s): {[p[\"codigo\"] for p in nuevos]}')
+
+# Marcar como vistos
+vistos.update(p['codigo'] for p in data.get('procesos', []))
+vistos_path.write_text(json.dumps(sorted(vistos), ensure_ascii=False, indent=2))
+
+# Enviar email
+sys.path.insert(0, '.')
+from monitor import build_email_ncos, enviar_email
+asunto, html, texto = build_email_ncos(nuevos)
+enviar_email(asunto, html, texto)
+"
