@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Convierte HTML a PDF y firma ambos recuadros de firma:
-  - Firma1: página 2 (proforma, FIRMA DE RESPONSABILIDAD)
+Firma el PDF de proforma con dos firmas electrónicas:
+  - Firma1: página 2 (proforma)
   - Firma2: página 3 (carta anti-lavado)
 Uso: P12_PASS=<clave> python3 firmar.py
 """
@@ -15,15 +15,12 @@ from pyhanko.stamp import QRStampStyle
 
 P12_PATH = "/root/.claude/uploads/62158717-1a5c-565b-9ca5-eaa58166a747/73c7eb7f-14775814_identity_0952773976.p12"
 P12_PASS = os.environ.get("P12_PASS", "").encode()
-HTML_FILE = "/home/user/SERCOP/proforma_NIC-0998610151001-2026-00028.html"
+HTML_FILE    = "/home/user/SERCOP/proforma_NIC-0998610151001-2026-00028.html"
 PDF_UNSIGNED = "/home/user/SERCOP/proforma_NIC-0998610151001-2026-00028_unsigned.pdf"
 PDF_PASS1    = "/home/user/SERCOP/proforma_pass1.pdf"
 PDF_SIGNED   = "/home/user/SERCOP/Proforma — NIC-0998610151001-2026-00028 — PREVIFUEGO-signed.pdf"
 
-# Coordenadas medidas del PDF renderizado por WeasyPrint (bottom-up, A4=841.9pt)
-# Página 2 — FIRMA DE RESPONSABILIDAD (proforma)
 BOX_P2 = (38, 508, 294, 606)
-# Página 3 — Carta anti-lavado
 BOX_P3 = (34, 303, 350, 401)
 
 STYLE = QRStampStyle(
@@ -38,17 +35,12 @@ STYLE = QRStampStyle(
 )
 
 def load_signer():
-    return signers.SimpleSigner.load_pkcs12(
-        pfx_file=P12_PATH,
-        passphrase=P12_PASS
-    )
+    return signers.SimpleSigner.load_pkcs12(pfx_file=P12_PATH, passphrase=P12_PASS)
 
-# 1. HTML → PDF
 print("1. Convirtiendo HTML a PDF...")
 WP_HTML(filename=HTML_FILE).write_pdf(PDF_UNSIGNED)
 print("   OK")
 
-# 2. Primera firma: página 2 (con MDPPerm.FILL_FORMS para permitir segunda firma)
 print("2. Firmando página 2 (proforma)...")
 signer = load_signer()
 with open(PDF_UNSIGNED, "rb") as inf:
@@ -63,16 +55,11 @@ with open(PDF_UNSIGNED, "rb") as inf:
         certify=True,
         docmdp_permissions=MDPPerm.FILL_FORMS,
     )
-    pdf_signer1 = signers.PdfSigner(signature_meta=meta1, signer=signer, stamp_style=STYLE)
+    ps1 = signers.PdfSigner(signature_meta=meta1, signer=signer, stamp_style=STYLE)
     with open(PDF_PASS1, "wb") as outf:
-        pdf_signer1.sign_pdf(
-            writer,
-            appearance_text_params={"url": "https://www.firmadigital.gob.ec"},
-            output=outf
-        )
+        ps1.sign_pdf(writer, appearance_text_params={"url": "https://www.firmadigital.gob.ec"}, output=outf)
 print("   OK")
 
-# 3. Segunda firma: página 3 (carta anti-lavado)
 print("3. Firmando página 3 (carta anti-lavado)...")
 signer = load_signer()
 with open(PDF_PASS1, "rb") as inf:
@@ -83,12 +70,8 @@ with open(PDF_PASS1, "rb") as inf:
         location="Guayaquil, Ecuador",
         name="Alejandro Alberto López Mejía",
     )
-    pdf_signer2 = signers.PdfSigner(signature_meta=meta2, signer=signer, stamp_style=STYLE)
+    ps2 = signers.PdfSigner(signature_meta=meta2, signer=signer, stamp_style=STYLE)
     with open(PDF_SIGNED, "wb") as outf:
-        pdf_signer2.sign_pdf(
-            writer2,
-            appearance_text_params={"url": "https://www.firmadigital.gob.ec"},
-            output=outf
-        )
+        ps2.sign_pdf(writer2, appearance_text_params={"url": "https://www.firmadigital.gob.ec"}, output=outf)
 print("   OK")
 print(f"\nListo: {PDF_SIGNED}")
