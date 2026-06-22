@@ -1,21 +1,5 @@
 {
   "actualizado": "2026-06-20T10:11:38.468800+00:00",
-  "total": 1,
-  "procesos": [
-    {
-      "id": "",
-      "codigo": "NIC-0998610151001-2026-00028",
-      "tipo": "Ínfimas Cuantías",
-      "fecha_publicacion": "2026-06-17 08:50:00",
-      "provincia_canton": "GUAYAS - DAULE",
-      "descripcion": "ADQUISICIÓN Y RECARGA DE EXTINTORES PORTÁTILES PARA LAS DIFERENTES ÁREAS DE LA EMPRESA PÚBLICA MUNICIPAL DE TRANSITO Y MOVILIDAD DE DAULE EP",
-      "estado": "En Curso",
-      "fecha_limite": "2026-06-22 08:56:00",
-      "entidad": "EMPRESA PUBLICA MUNICIPAL DE TRANSITO Y MOVILIDAD DE DAULE EP",
-      "funcionario": "",
-      "email": "",
-      "items": [],
-      "url_detalle": ""
-    }
-  ]
+  "total": 0,
+  "procesos": []
 }
