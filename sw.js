@@ -4,6 +4,7 @@ const CACHE   = 'previfuego-v1';
 const API_URL = 'https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/api/search_ocds';
 const VISTOS_KEY = 'nco_vistos';
 
+// ── Instalación ───────────────────────────────────────────────────────────────
 self.addEventListener('install', e => {
   self.skipWaiting();
   e.waitUntil(
@@ -21,26 +22,34 @@ self.addEventListener('activate', e => {
   e.waitUntil(clients.claim());
 });
 
+// ── Cache-first para recursos estáticos ───────────────────────────────────────
 self.addEventListener('fetch', e => {
   if (!e.request.url.startsWith('http')) return;
   if (e.request.url.includes('datosabiertos.compraspublicas') ||
-      e.request.url.includes('nco-guayas.json')) return;
+      e.request.url.includes('nco-guayas.json')) return; // no cachear API
   e.respondWith(
     caches.match(e.request).then(r => r || fetch(e.request))
   );
 });
 
+// ── Periodic Background Sync (Android Chrome) ─────────────────────────────────
 self.addEventListener('periodicsync', e => {
   if (e.tag === 'check-nco') {
     e.waitUntil(verificarNuevosNCO());
   }
 });
 
+// ── Mensaje desde la página: verificar ahora ─────────────────────────────────
 self.addEventListener('message', e => {
-  if (e.data?.type === 'CHECK_NOW') verificarNuevosNCO();
-  if (e.data?.type === 'MARCAR_VISTOS') guardarVistos(e.data.ids);
+  if (e.data?.type === 'CHECK_NOW') {
+    verificarNuevosNCO();
+  }
+  if (e.data?.type === 'MARCAR_VISTOS') {
+    guardarVistos(e.data.ids);
+  }
 });
 
+// ── Push desde servidor (futuro) ─────────────────────────────────────────────
 self.addEventListener('push', e => {
   let data = {};
   try { data = e.data?.json() || {}; } catch {};
@@ -57,6 +66,7 @@ self.addEventListener('push', e => {
   );
 });
 
+// ── Click en notificación → abre la app ───────────────────────────────────────
 self.addEventListener('notificationclick', e => {
   e.notification.close();
   const url = e.notification.data?.url || '/SERCOP/';
@@ -69,16 +79,21 @@ self.addEventListener('notificationclick', e => {
   );
 });
 
+// ── Lógica de verificación ────────────────────────────────────────────────────
+
 async function getVistos() {
-  try { const db = await openDB(); return (await dbGet(db, VISTOS_KEY)) || []; }
-  catch { return []; }
+  try {
+    const db = await openDB();
+    return (await dbGet(db, VISTOS_KEY)) || [];
+  } catch { return []; }
 }
 
 async function guardarVistos(ids) {
   try {
     const db = await openDB();
     const actuales = (await dbGet(db, VISTOS_KEY)) || [];
-    await dbSet(db, VISTOS_KEY, [...new Set([...actuales, ...ids])]);
+    const merged = [...new Set([...actuales, ...ids])];
+    await dbSet(db, VISTOS_KEY, merged);
   } catch {}
 }
 
@@ -94,38 +109,55 @@ async function verificarNuevosNCO() {
       const res = await fetch(url, { cache: 'no-store' });
       if (!res.ok) continue;
       const data = await res.json();
-      (data.data || []).filter(p => {
+      const items = (data.data || []).filter(p => {
         const r = (p.region || '').toUpperCase();
         const l = (p.locality || '').toUpperCase();
         return r.includes('GUAYAS') || l.includes('GUAYAS') || l.includes('GUAYAQUIL');
-      }).forEach(p => {
-        const id = p.ocid || String(p.id);
-        if (!vistos.includes(id) && !nuevos.find(x => (x.ocid||x.id)===(p.ocid||p.id)))
-          nuevos.push(p);
       });
+      for (const p of items) {
+        const id = p.ocid || String(p.id);
+        if (!vistos.includes(id) && !nuevos.find(x => (x.ocid || x.id) === (p.ocid || p.id))) {
+          nuevos.push(p);
+        }
+      }
     } catch {}
   }
 
   if (nuevos.length === 0) return;
+
+  // Guardar como vistos
   await guardarVistos(nuevos.map(p => p.ocid || String(p.id)));
 
-  for (const p of nuevos.slice(0, 3)) {
+  // Enviar notificación por cada uno (máx 3 para no saturar)
+  const mostrar = nuevos.slice(0, 3);
+  for (const p of mostrar) {
     const monto = p.amount ? ` | $${parseFloat(p.amount).toLocaleString('es-EC')}` : '';
     await self.registration.showNotification('🔥 Nuevo proceso en Guayas — SERCOP', {
-      body: `${p.description || p.title || p.ocid}\n${p.buyer || ''}${monto}`,
-      icon: '/SERCOP/icons/icon-192.png', badge: '/SERCOP/icons/icon-192.png',
-      tag: p.ocid || String(p.id),
-      data: { url: `https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/ocds/${encodeURIComponent(p.ocid || '')}` },
-      vibrate: [200, 100, 200], requireInteraction: true,
+      body:   `${p.description || p.title || p.ocid}\n${p.buyer || ''}${monto}`,
+      icon:   '/SERCOP/icons/icon-192.png',
+      badge:  '/SERCOP/icons/icon-192.png',
+      tag:    p.ocid || String(p.id),
+      data:   {
+        url: `https://datosabiertos.compraspublicas.gob.ec/PLATAFORMA/ocds/${encodeURIComponent(p.ocid || '')}`,
+      },
+      vibrate: [200, 100, 200],
+      requireInteraction: true,
     });
   }
-  if (nuevos.length > 3)
-    await self.registration.showNotification(`🔥 +${nuevos.length-3} proceso(s) más en Guayas`,
-      { body: 'Abre la app para ver todos', icon: '/SERCOP/icons/icon-192.png', tag: 'nco-extra' });
 
+  if (nuevos.length > 3) {
+    await self.registration.showNotification(
+      `🔥 +${nuevos.length - 3} proceso(s) más en Guayas`,
+      { body: 'Abre la app para ver todos', icon: '/SERCOP/icons/icon-192.png', tag: 'nco-extra' }
+    );
+  }
+
+  // Notificar a las pestañas abiertas
   const allClients = await clients.matchAll({ includeUncontrolled: true });
   allClients.forEach(c => c.postMessage({ type: 'NUEVOS_NCO', count: nuevos.length }));
 }
+
+// ── IndexedDB mínimo para persistir los IDs vistos ───────────────────────────
 
 function openDB() {
   return new Promise((res, rej) => {
@@ -135,6 +167,7 @@ function openDB() {
     req.onerror   = e => rej(e.target.error);
   });
 }
+
 function dbGet(db, key) {
   return new Promise((res, rej) => {
     const tx = db.transaction('kv', 'readonly');
@@ -143,6 +176,7 @@ function dbGet(db, key) {
     req.onerror   = e => rej(e.target.error);
   });
 }
+
 function dbSet(db, key, val) {
   return new Promise((res, rej) => {
     const tx = db.transaction('kv', 'readwrite');
