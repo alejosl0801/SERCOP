@@ -2,7 +2,6 @@ name: NCO Scraper — SERCOP Guayas
 
 on:
   schedule:
-    # Cada hora de lunes a viernes, 6am-9pm hora Ecuador (UTC-5 → UTC 11-02)
     - cron: '0 11-23,0-2 * * 1-5'
   workflow_dispatch:
 
@@ -67,12 +66,8 @@ if not nuevos:
     sys.exit(0)
 
 print(f'{len(nuevos)} proceso(s) nuevo(s): {[p[\"codigo\"] for p in nuevos]}')
-
-# Marcar como vistos
 vistos.update(p['codigo'] for p in data.get('procesos', []))
 vistos_path.write_text(json.dumps(sorted(vistos), ensure_ascii=False, indent=2))
-
-# Enviar email
 sys.path.insert(0, '.')
 from monitor import build_email_ncos, enviar_email
 asunto, html, texto = build_email_ncos(nuevos)

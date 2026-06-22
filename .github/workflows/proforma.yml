@@ -1,13 +1,11 @@
 name: Proforma — Generar, Firmar y Subir
 
 on:
-  # Se dispara cuando el scraper actualiza nco-guayas.json
   push:
     paths:
       - 'nco-guayas.json'
     branches:
       - main
-      - master
   workflow_dispatch:
     inputs:
       nco:
@@ -77,42 +75,27 @@ jobs:
 
       - name: Subir proformas al portal SERCOP
         env:
-          SERCOP_USER:    ${{ secrets.SERCOP_USER }}
-          SERCOP_PASS:    ${{ secrets.SERCOP_PASS }}
+          SERCOP_USER: ${{ secrets.SERCOP_USER }}
+          SERCOP_PASS: ${{ secrets.SERCOP_PASS }}
         run: |
           python3 - <<'EOF'
-          import json, subprocess, sys
+          import json, subprocess, sys, os, re
           from pathlib import Path
-
           data = json.loads(Path('nco-guayas.json').read_text())
-          procesados = set()
-          p_path = Path('procesados.json')
-          if p_path.exists():
-              procesados = set(json.loads(p_path.read_text()))
-
           for proc in data.get('procesos', []):
               codigo = proc.get('codigo', '')
-              if not codigo:
-                  continue
-              import re
+              if not codigo: continue
               safe = re.sub(r'[^\w\-]', '_', codigo)
               pdf = Path(f'output/Proforma_{safe}_PREVIFUEGO_signed.pdf')
-              if not pdf.exists():
-                  continue
+              if not pdf.exists(): continue
               print(f'Subiendo {pdf.name}...')
               r = subprocess.run(
                   [sys.executable, 'scripts/upload_proforma.py', '--nco', codigo, '--pdf', str(pdf)],
-                  env={**__import__('os').environ}
-              )
-              if r.returncode == 0:
-                  print(f'  ✅ {codigo}')
-              elif r.returncode == 2:
-                  print(f'  ⚠ {codigo}: upload manual requerido')
-              else:
-                  print(f'  ❌ {codigo}: error en upload')
+                  env={**os.environ})
+              print('OK' if r.returncode == 0 else f'returncode={r.returncode}')
           EOF
 
-      - name: Subir PDFs como artefactos de GitHub Actions
+      - name: Guardar PDFs como artefactos
         uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -120,14 +103,9 @@ jobs:
           path: output/Proforma_*_signed.pdf
           retention-days: 30
 
-      - name: Commit procesados.json actualizado
+      - name: Commit procesados.json
         run: |
           git config user.name  "PREVIFUEGO Bot"
           git config user.email "alejosl0801@gmail.com"
           git add procesados.json nco-vistos-ci.json 2>/dev/null || true
-          if git diff --cached --quiet; then
-            echo "Sin cambios"
-          else
-            git commit -m "bot: actualizar procesados.json $(date -u '+%Y-%m-%d %H:%M UTC')"
-            git push
-          fi
+          git diff --cached --quiet || git commit -m "bot: actualizar procesados.json $(date -u '+%Y-%m-%d %H:%M UTC')" && git push || true
