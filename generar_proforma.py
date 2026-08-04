@@ -122,6 +122,11 @@ def calcular_precio(item: dict) -> ResultadoMatch:
     unidad   = item.get("unidad", "Unidad")
     cantidad = parse_float(item.get("cantidad", "1")) or 1.0
 
+    # Precio fijo explícito en el JSON — lo respeta sin recalcular
+    if "precio_unitario" in item:
+        precio = float(item["precio_unitario"])
+        return ResultadoMatch(desc, unidad, cantidad, precio, "", True)
+
     tipo   = detect_tipo(desc)
     agente = detect_agente(desc)
     lbs    = extract_lbs(desc)

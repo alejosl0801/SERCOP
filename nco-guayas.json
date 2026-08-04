@@ -16,15 +16,15 @@
       "email": "compraspublicas@atmdaule.gob.ec",
       "url_detalle": "",
       "items": [
-        {"descripcion": "Recarga de Extintor 10 lbs PQS", "agente": "recarga_PQS", "capacidad": "10 lbs", "unidad": "Unidad", "cantidad": 29},
-        {"descripcion": "Recarga de Extintor 10 lbs CO2", "agente": "recarga_CO2", "capacidad": "10 lbs", "unidad": "Unidad", "cantidad": 5},
-        {"descripcion": "Recarga de Extintor 50 lbs PQS", "agente": "recarga_PQS", "capacidad": "50 lbs", "unidad": "Unidad", "cantidad": 1},
-        {"descripcion": "Adquisición de Extintor 10 lbs CO2", "agente": "extintor_CO2", "capacidad": "10 lbs", "unidad": "Unidad", "cantidad": 14},
-        {"descripcion": "Adquisición de Extintor 20 lbs CO2", "agente": "extintor_CO2", "capacidad": "20 lbs", "unidad": "Unidad", "cantidad": 1},
-        {"descripcion": "Adquisición de Extintor 10 lbs PQS", "agente": "extintor_PQS", "capacidad": "10 lbs", "unidad": "Unidad", "cantidad": 8},
-        {"descripcion": "Adquisición de Extintor 20 lbs PQS", "agente": "extintor_PQS", "capacidad": "20 lbs", "unidad": "Unidad", "cantidad": 2},
-        {"descripcion": "Adquisición de Extintor 50 lbs PQS", "agente": "extintor_PQS", "capacidad": "50 lbs", "unidad": "Unidad", "cantidad": 1},
-        {"descripcion": "Adquisición de Extintor 150 lbs PQS", "agente": "extintor_PQS", "capacidad": "150 lbs", "unidad": "Unidad", "cantidad": 1}
+        {"descripcion": "Recarga de Extintor 10 lbs PQS", "agente": "recarga_PQS", "capacidad": "10 lbs", "unidad": "Unidad", "cantidad": 29, "precio_unitario": 8.00},
+        {"descripcion": "Recarga de Extintor 10 lbs CO2", "agente": "recarga_CO2", "capacidad": "10 lbs", "unidad": "Unidad", "cantidad": 5,  "precio_unitario": 8.00},
+        {"descripcion": "Recarga de Extintor 50 lbs PQS", "agente": "recarga_PQS", "capacidad": "50 lbs", "unidad": "Unidad", "cantidad": 1,  "precio_unitario": 40.00},
+        {"descripcion": "Adquisición de Extintor 10 lbs CO2", "agente": "extintor_CO2", "capacidad": "10 lbs", "unidad": "Unidad", "cantidad": 14, "precio_unitario": 39.00},
+        {"descripcion": "Adquisición de Extintor 20 lbs CO2", "agente": "extintor_CO2", "capacidad": "20 lbs", "unidad": "Unidad", "cantidad": 1,  "precio_unitario": 88.00},
+        {"descripcion": "Adquisición de Extintor 10 lbs PQS", "agente": "extintor_PQS", "capacidad": "10 lbs", "unidad": "Unidad", "cantidad": 8,  "precio_unitario": 16.00},
+        {"descripcion": "Adquisición de Extintor 20 lbs PQS", "agente": "extintor_PQS", "capacidad": "20 lbs", "unidad": "Unidad", "cantidad": 2,  "precio_unitario": 22.00},
+        {"descripcion": "Adquisición de Extintor 50 lbs PQS", "agente": "extintor_PQS", "capacidad": "50 lbs", "unidad": "Unidad", "cantidad": 1,  "precio_unitario": 168.00},
+        {"descripcion": "Adquisición de Extintor 150 lbs PQS", "agente": "extintor_PQS", "capacidad": "150 lbs", "unidad": "Unidad", "cantidad": 1,  "precio_unitario": 220.00}
       ]
     }
   ]
