@@ -1,5 +1,5 @@
 {
-  "actualizado": "2026-06-20T10:11:38.468800+00:00",
+  "actualizado": "2026-08-04T00:00:00.000000+00:00",
   "total": 1,
   "procesos": [
     {
@@ -11,11 +11,21 @@
       "descripcion": "ADQUISICIÓN Y RECARGA DE EXTINTORES PORTÁTILES PARA LAS DIFERENTES ÁREAS DE LA EMPRESA PÚBLICA MUNICIPAL DE TRANSITO Y MOVILIDAD DE DAULE EP",
       "estado": "En Curso",
       "fecha_limite": "2026-06-22 08:56:00",
-      "entidad": "EMPRESA PUBLICA MUNICIPAL DE TRANSITO Y MOVILIDAD DE DAULE EP",
-      "funcionario": "",
-      "email": "",
-      "items": [],
-      "url_detalle": ""
+      "entidad": "EMPRESA PUBLICA MUNICIPAL DE TRÁNSITO Y MOVILIDAD DE DAULE EP",
+      "funcionario": "Ing. Johanna Salinas",
+      "email": "compraspublicas@atmdaule.gob.ec",
+      "url_detalle": "",
+      "items": [
+        {"descripcion": "Recarga de Extintor 10 lbs PQS", "agente": "recarga_PQS", "capacidad": "10 lbs", "unidad": "Unidad", "cantidad": 29},
+        {"descripcion": "Recarga de Extintor 10 lbs CO2", "agente": "recarga_CO2", "capacidad": "10 lbs", "unidad": "Unidad", "cantidad": 5},
+        {"descripcion": "Recarga de Extintor 50 lbs PQS", "agente": "recarga_PQS", "capacidad": "50 lbs", "unidad": "Unidad", "cantidad": 1},
+        {"descripcion": "Adquisición de Extintor 10 lbs CO2", "agente": "extintor_CO2", "capacidad": "10 lbs", "unidad": "Unidad", "cantidad": 14},
+        {"descripcion": "Adquisición de Extintor 20 lbs CO2", "agente": "extintor_CO2", "capacidad": "20 lbs", "unidad": "Unidad", "cantidad": 1},
+        {"descripcion": "Adquisición de Extintor 10 lbs PQS", "agente": "extintor_PQS", "capacidad": "10 lbs", "unidad": "Unidad", "cantidad": 8},
+        {"descripcion": "Adquisición de Extintor 20 lbs PQS", "agente": "extintor_PQS", "capacidad": "20 lbs", "unidad": "Unidad", "cantidad": 2},
+        {"descripcion": "Adquisición de Extintor 50 lbs PQS", "agente": "extintor_PQS", "capacidad": "50 lbs", "unidad": "Unidad", "cantidad": 1},
+        {"descripcion": "Adquisición de Extintor 150 lbs PQS", "agente": "extintor_PQS", "capacidad": "150 lbs", "unidad": "Unidad", "cantidad": 1}
+      ]
     }
   ]
 }
