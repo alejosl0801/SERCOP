@@ -3,8 +3,7 @@ name: Deploy GitHub Pages
 on:
   push:
     branches:
-      - main
-      - master
+      - claude/eager-wright-zmtjvx
     paths:
       - 'index.html'
       - 'sw.js'

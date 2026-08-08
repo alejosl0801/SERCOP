@@ -6,8 +6,7 @@ on:
     paths:
       - 'nco-guayas.json'
     branches:
-      - main
-      - master
+      - claude/eager-wright-zmtjvx
   workflow_dispatch:
     inputs:
       nco:
