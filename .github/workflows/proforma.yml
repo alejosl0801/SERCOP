@@ -6,7 +6,8 @@ on:
     paths:
       - 'nco-guayas.json'
     branches:
-      - claude/eager-wright-zmtjvx
+      - main
+      - master
   workflow_dispatch:
     inputs:
       nco:
@@ -36,7 +37,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Instalar dependencias del sistema (WeasyPrint)
         run: |
@@ -118,6 +118,7 @@ jobs:
           name: proformas-${{ github.run_number }}
           path: output/Proforma_*_signed.pdf
           retention-days: 30
+          if-no-files-found: ignore
 
       - name: Commit procesados.json actualizado
         run: |
