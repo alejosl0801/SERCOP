@@ -380,7 +380,7 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
   <table style="margin-bottom:6px;">
     <tr>
       <td style="border:1px solid #555;width:33%;"><span class="ref">Forma de pago:</span>Contra entrega</td>
-      <td style="border:1px solid #555;width:33%;"><span class="ref">Plazo entrega:</span>5 días hábiles</td>
+      <td style="border:1px solid #555;width:33%;"><span class="ref">Plazo entrega:</span>{nco.get("plazo_entrega", "5 días hábiles")}</td>
       <td style="border:1px solid #555;width:34%;"><span class="ref">Validez oferta:</span>30 días</td>
     </tr>
   </table>
