@@ -1,6 +1,6 @@
 {
-  "actualizado": "2026-08-04T00:00:00.000000+00:00",
-  "total": 1,
+  "actualizado": "2026-08-20T19:45:00.000000+00:00",
+  "total": 3,
   "procesos": [
     {
       "id": "",
@@ -25,6 +25,50 @@
         {"descripcion": "Adquisición de Extintor 20 lbs PQS", "agente": "extintor_PQS", "capacidad": "20 lbs", "unidad": "Unidad", "cantidad": 2,  "precio_unitario": 22.00},
         {"descripcion": "Adquisición de Extintor 50 lbs PQS", "agente": "extintor_PQS", "capacidad": "50 lbs", "unidad": "Unidad", "cantidad": 1,  "precio_unitario": 168.00},
         {"descripcion": "Adquisición de Extintor 150 lbs PQS", "agente": "extintor_PQS", "capacidad": "150 lbs", "unidad": "Unidad", "cantidad": 1,  "precio_unitario": 220.00}
+      ]
+    },
+    {
+      "id": "",
+      "codigo": "NIC-1768022190001-2026-00346",
+      "tipo": "Ínfimas Cuantías",
+      "fecha_publicacion": "2026-08-18 14:34:00",
+      "provincia_canton": "GUAYAS - GUAYAQUIL",
+      "descripcion": "SERVICIO DE MANTENIMIENTO Y RECARGA DE EXTINTORES AGENCIA GUAYAQUIL",
+      "estado": "En Curso",
+      "fecha_limite": "2026-08-19 14:35:00",
+      "entidad": "ISSFA",
+      "funcionario": "PATRICIO QUINCHUELA",
+      "email": "hquinchuela@issfa.mil.ec",
+      "url_detalle": "https://compraspublicas.gob.ec/ProcesoContratacion/compras/NCO/NCORegistroDetalle.cpe?&id=vytMbt-UAUdHRpxqIDZEBLxNNlswywCI0omxf0X9zkQ,&op=0",
+      "items": [
+        {"descripcion": "Mantenimiento y recarga de extintor CO2 5 lbs", "agente": "recarga_CO2", "capacidad": "5 lbs", "unidad": "Unidad", "cantidad": 5},
+        {"descripcion": "Mantenimiento y recarga de extintor PQS 10 lbs", "agente": "recarga_PQS", "capacidad": "10 lbs", "unidad": "Unidad", "cantidad": 20},
+        {"descripcion": "Mantenimiento y recarga de extintor de agua presurizada de 2.5 gls", "agente": "recarga_AGUA", "capacidad": "2.5 gal", "unidad": "Unidad", "cantidad": 5, "precio_unitario": 8.00},
+        {"descripcion": "Mantenimiento y recarga de extintor CO2 20 lbs", "agente": "recarga_CO2", "capacidad": "20 lbs", "unidad": "Unidad", "cantidad": 1},
+        {"descripcion": "Mantenimiento y recarga de extintor PQS 3 lbs", "agente": "recarga_PQS", "capacidad": "3 lbs", "unidad": "Unidad", "cantidad": 3},
+        {"descripcion": "Mantenimiento y recarga de extintor PQS 10 lbs en estaciones de gabinetes de red contra incendios", "agente": "recarga_PQS", "capacidad": "10 lbs", "unidad": "Unidad", "cantidad": 5}
+      ]
+    },
+    {
+      "id": "",
+      "codigo": "NIC-0968592360001-2026-00015",
+      "tipo": "Ínfimas Cuantías",
+      "fecha_publicacion": "2026-08-18 09:05:00",
+      "provincia_canton": "GUAYAS - GUAYAQUIL",
+      "descripcion": "SERVICIO DE INSPECCIÓN, MANTENIMIENTO Y RECARGA DE EXTINTORES DE DIÓXIDO DE CARBONO CO2 Y POLVO QUÍMICO SECO PQS DE LA DIRNEA",
+      "estado": "En Curso",
+      "fecha_limite": "2026-08-25 14:06:00",
+      "entidad": "DIRECCION NACIONAL DE LOS ESPACIOS ACUATICOS",
+      "funcionario": "SUBS-AB ZAMORA FAJARDO MARIO",
+      "email": "mzamora@armada.mil.ec",
+      "url_detalle": "https://compraspublicas.gob.ec/ProcesoContratacion/compras/NCO/NCORegistroDetalle.cpe?&id=nvDfcPqqvjdIKxPq35P5Dulu5iCHNMIL8t4f_BPX2wI,&op=0",
+      "items": [
+        {"descripcion": "Recarga de extintor Polvo Químico de 150 libras", "agente": "recarga_PQS", "capacidad": "150 lbs", "unidad": "Unidad", "cantidad": 2},
+        {"descripcion": "Recarga de extintor Gas CO2 de 50 libras", "agente": "recarga_CO2", "capacidad": "50 lbs", "unidad": "Unidad", "cantidad": 1},
+        {"descripcion": "Recarga de extintor Polvo Químico de 10 libras", "agente": "recarga_PQS", "capacidad": "10 lbs", "unidad": "Unidad", "cantidad": 13},
+        {"descripcion": "Recarga de extintor Polvo Químico de 20 libras", "agente": "recarga_PQS", "capacidad": "20 lbs", "unidad": "Unidad", "cantidad": 9},
+        {"descripcion": "Recarga de extintor CO2 de 10 libras", "agente": "recarga_CO2", "capacidad": "10 lbs", "unidad": "Unidad", "cantidad": 11},
+        {"descripcion": "Recarga de extintor CO2 de 15 libras", "agente": "recarga_CO2", "capacidad": "15 lbs", "unidad": "Unidad", "cantidad": 6}
       ]
     }
   ]

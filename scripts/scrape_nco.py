@@ -18,9 +18,7 @@ BASE_DIR = Path(__file__).parent.parent
 
 KEYWORDS = ["extintor", "extintores", "recarga", "incendio"]
 GUAYAS_TERMS = [
-    "GUAYAS", "GUAYAQUIL", "SAMBORONDON", "DAULE", "MILAGRO",
-    "DURAN", "DURÁN", "YAGUACHI", "NARANJAL", "PLAYAS", "EL TRIUNFO",
-    "NOBOL", "PEDRO CARBO", "BALZAR", "SANTA LUCIA", "SANTA LUCÍA"
+    "GUAYAQUIL", "SAMBORONDON", "DAULE", "DURAN", "DURÁN"
 ]
 
 
