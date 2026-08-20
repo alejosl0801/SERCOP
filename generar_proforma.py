@@ -500,6 +500,17 @@ def firmar_pdf(pdf_unsigned: Path, pdf_signed: Path):
     doc = fitz.open(str(pdf_unsigned))
     n   = len(doc)
 
+    # Detectar dinámicamente qué página es la proforma y cuál es la carta.
+    # No asumir un layout fijo de 3 páginas: si la tabla de ítems es corta,
+    # la proforma cabe en 1 sola página física y la carta se corre un índice.
+    carta_idx = None
+    for i in range(n):
+        if "CARTA DE DECLARACIÓN" in doc[i].get_text():
+            carta_idx = i
+            break
+    proforma_idx = (carta_idx - 1) if carta_idx else 0
+    carta_last_idx = (n - 1) if carta_idx is not None else None
+
     def firma_box(page_idx: int, default: tuple) -> tuple:
         if page_idx >= n:
             return default
@@ -516,9 +527,9 @@ def firmar_pdf(pdf_unsigned: Path, pdf_signed: Path):
         r = max(valid, key=lambda r: r.y0)
         return (r.x0, h - r.y1, r.x1, h - r.y0)
 
-    has_carta = n >= 3  # tercera página existe (carta anti-lavado)
-    box_p2 = firma_box(1, (38, 480, 300, 590))
-    box_p3 = firma_box(2, (34, 280, 360, 390)) if has_carta else None
+    has_carta = carta_last_idx is not None
+    box_p2 = firma_box(proforma_idx, (38, 480, 300, 590))
+    box_p3 = firma_box(carta_last_idx, (34, 280, 360, 390)) if has_carta else None
     doc.close()
 
     signer_obj = signers.SimpleSigner.load_pkcs12(pfx_file=P12_PATH, passphrase=P12_PASS)
@@ -526,9 +537,9 @@ def firmar_pdf(pdf_unsigned: Path, pdf_signed: Path):
 
     with open(pdf_unsigned, "rb") as inf:
         w = IncrementalPdfFileWriter(inf)
-        fields.append_signature_field(w, SigFieldSpec("Firma1", on_page=1, box=box_p2))
+        fields.append_signature_field(w, SigFieldSpec("Firma1", on_page=proforma_idx, box=box_p2))
         if has_carta and box_p3:
-            fields.append_signature_field(w, SigFieldSpec("Firma2", on_page=2, box=box_p3))
+            fields.append_signature_field(w, SigFieldSpec("Firma2", on_page=carta_last_idx, box=box_p3))
         meta1 = PdfSignatureMetadata(
             field_name="Firma1",
             reason="Firma electrónica del proveedor PREVIFUEGO",
