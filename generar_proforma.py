@@ -117,7 +117,7 @@ class ResultadoMatch:
         self.matched       = matched
         self.pendiente_tipo = pendiente_tipo  # descripción del problema para el aviso
 
-def calcular_precio(item: dict) -> ResultadoMatch:
+def calcular_precio(item: dict, tarifa_lb: float | None = None) -> ResultadoMatch:
     desc     = item.get("descripcion", "")
     unidad   = item.get("unidad", "Unidad")
     cantidad = parse_float(item.get("cantidad", "1")) or 1.0
@@ -134,7 +134,7 @@ def calcular_precio(item: dict) -> ResultadoMatch:
     # ── RECARGA con precio por libra ──────────────────────────────────────────
     if tipo == "recarga" and agente in ("PQS", "CO2") and lbs:
         tarifa_key = f"recarga_{agente}"
-        tarifa     = TARIFAS_LB.get(tarifa_key, 0.70)
+        tarifa     = tarifa_lb if tarifa_lb is not None else TARIFAS_LB.get(tarifa_key, 0.70)
         precio     = round(tarifa * lbs, 2)
         lbs_disp   = int(lbs) if lbs == int(lbs) else lbs
         desc_clean = f"Recarga de extintor {agente} {lbs_disp} lbs"
@@ -178,8 +178,15 @@ def calcular_precio(item: dict) -> ResultadoMatch:
         pendiente_tipo=f"desconocido: {desc[:80]}"
     )
 
-def build_filas(nco_items: list) -> list[ResultadoMatch]:
-    return [calcular_precio(it) for it in nco_items]
+def build_filas(nco_items: list, tarifa_lb: float | None = None) -> list[ResultadoMatch]:
+    filas = []
+    for it in nco_items:
+        r = calcular_precio(it, tarifa_lb)
+        # Código CPC y descripción tal como los publica la entidad: nunca se reescriben.
+        r.descripcion_oficial = it.get("descripcion_oficial")
+        r.cpc = it.get("cpc")
+        filas.append(r)
+    return filas
 
 # ── Alerta por email ──────────────────────────────────────────────────────────
 
@@ -245,6 +252,7 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
     total    = round(subtotal + iva, 2)
 
     rows_html = ""
+    usa_cpc = any(getattr(f, "cpc", None) for f in filas)
     for i, f in enumerate(filas, 1):
         if f.matched:
             precio_str = f"${f.precio_unitario:.2f}"
@@ -256,10 +264,13 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
             nota_html  = f'<br><small style="color:#c00;">{f.notas}</small>'
 
         cant_disp = int(f.cantidad) if f.cantidad == int(f.cantidad) else round(f.cantidad, 4)
+        desc_show = getattr(f, "descripcion_oficial", None) or f.descripcion
+        cpc_td = (f'<td style="text-align:center;">{f.cpc}</td>'
+                  if usa_cpc else "")
         rows_html += f"""
         <tr>
-          <td style="text-align:center;">{i}</td>
-          <td>{f.descripcion}{nota_html}</td>
+          <td style="text-align:center;">{i}</td>{cpc_td}
+          <td>{desc_show}{nota_html}</td>
           <td style="text-align:center;">{f.unidad}</td>
           <td style="text-align:center;">{cant_disp}</td>
           <td style="text-align:right;">{precio_str}</td>
@@ -355,8 +366,8 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
   <table class="items" style="margin-bottom:6px;">
     <thead>
       <tr>
-        <th style="width:4%;">N°</th>
-        <th style="width:42%;">Descripción</th>
+        <th style="width:4%;">N°</th>{'<th style="width:10%;">CPC</th>' if usa_cpc else ''}
+        <th style="width:{32 if usa_cpc else 42}%;">Descripción</th>
         <th style="width:10%;">Unidad</th>
         <th style="width:8%;">Cant.</th>
         <th style="width:16%;">P. Unitario</th>
@@ -591,7 +602,7 @@ def procesar_nco(nco: dict, firmar: bool = True, forzar: bool = False) -> dict:
         print("  ⚠ Sin ítems — verifica el TDR manualmente.")
         filas = []
     else:
-        filas = build_filas(nco_items)
+        filas = build_filas(nco_items, nco.get("tarifa_lb"))
         n_ok  = sum(1 for f in filas if f.matched)
         n_err = sum(1 for f in filas if not f.matched)
         print(f"  Ítems: {n_ok} con precio automático, {n_err} pendientes")
