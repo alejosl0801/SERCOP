@@ -270,6 +270,8 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
 
         cant_disp = int(f.cantidad) if f.cantidad == int(f.cantidad) else round(f.cantidad, 4)
         desc_show = getattr(f, "descripcion_oficial", None) or f.descripcion
+        if getattr(f, "descripcion_oficial", None) and f.matched:
+            nota_html = ""
         cpc_td = (f'<td style="text-align:center;">{f.cpc}</td>'
                   if usa_cpc else "")
         rows_html += f"""
@@ -290,7 +292,16 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
                       '⚠ Esta proforma tiene ítems sin precio. '
                       'Revisa tu email y completa los valores antes de firmar y enviar.</p>')
 
-    return f"""<!DOCTYPE html>
+    razon      = prov.get("razon_social", prov["nombre"])
+    nombre_com = prov.get("nombre_comercial", "")
+    lugar      = nco.get("lugar_entrega")
+    lugar_html = (f'<tr><td colspan="3" style="border:1px solid #555;"><span class="ref">Lugar y horario:</span>{lugar}</td></tr>'
+                  if lugar else "")
+    specs = nco.get("especificaciones") or [
+        "Se cumplirá íntegramente lo establecido en las especificaciones técnicas / términos de referencia de la entidad contratante."]
+    specs_html = "".join(f"<li>{x}</li>" for x in specs)
+
+    html = f"""<!DOCTYPE html>
 <html lang="es">
 <head>
 <meta charset="UTF-8">
@@ -337,7 +348,7 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
       <td style="border:none;width:90px;vertical-align:middle;" class="logo-area">{logo_tag}</td>
       <td style="border:none;vertical-align:middle;text-align:center;">
         <h2>PROFORMA COMERCIAL</h2>
-        <div style="font-size:10px;"><strong>PREVIFUEGO</strong> — RUC: {prov['ruc']}</div>
+        <div style="font-size:10px;"><strong>{razon}</strong>{" — nombre comercial: " + nombre_com if nombre_com else ""} — RUC: {prov['ruc']}</div>
         <div style="font-size:9px;">{prov['direccion']} | {prov['email']}</div>
       </td>
       <td style="border:1px solid #555;width:120px;vertical-align:top;font-size:9px;padding:4px;">
@@ -358,7 +369,7 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
   <div class="section-title">DATOS DEL PROVEEDOR</div>
   <table style="margin-bottom:6px;">
     <tr>
-      <td style="border:1px solid #555;"><span class="ref">Razón social / Nombre:</span>{prov['nombre']}</td>
+      <td style="border:1px solid #555;"><span class="ref">Razón social:</span>{razon}{"<br><span class=\"ref\">Nombre comercial:</span>" + nombre_com if nombre_com else ""}</td>
       <td style="border:1px solid #555;width:35%;"><span class="ref">RUC/CI:</span>{prov['ruc']}</td>
     </tr>
     <tr>
@@ -398,7 +409,7 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
       <td style="border:1px solid #555;width:33%;"><span class="ref">Forma de pago:</span>{nco.get("forma_pago", "Contra entrega")}</td>
       <td style="border:1px solid #555;width:33%;"><span class="ref">Plazo entrega:</span>{nco.get("plazo_entrega", "5 días hábiles")}</td>
       <td style="border:1px solid #555;width:34%;"><span class="ref">Validez oferta:</span>{nco.get("vigencia_dias", 30)} días</td>
-    </tr>
+    </tr>{lugar_html}
   </table>
 
   <div class="section-title">GARANTÍA Y ESPECIFICACIONES</div>
@@ -406,10 +417,8 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
     <tr>
       <td style="border:1px solid #555;">
         <ul style="margin:2px 0 2px 14px;padding:0;font-size:9px;">
-          <li>Extintores PQS: cilindro de acero, válvula de seguridad, manómetro y manguera. Certificación UL/FM.</li>
-          <li>Extintores CO2: cilindro de alta presión, sin manómetro (agente gaseoso). Certificación UL/FM.</li>
-          <li>Recargas: incluyen prueba hidrostática, carga certificada y etiqueta vigente según INEN 739.</li>
-          <li>{nco.get("garantia", "Garantía técnica: 1 año contra defectos de fabricación.")}</li>
+          {specs_html}
+          <li>{nco.get("garantia", "Garantía técnica: 1 año por defectos de taller.")}</li>
         </ul>
       </td>
     </tr>
@@ -419,7 +428,7 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
   <table style="margin-bottom:6px;">
     <tr>
       <td style="border:1px solid #555;width:50%;padding:4px;">
-        <div style="font-size:9px;margin-bottom:2px;">Proveedor: <strong>{prov['nombre']}</strong></div>
+        <div style="font-size:9px;margin-bottom:2px;">Proveedor: <strong>{razon}</strong></div>
         <div style="font-size:9px;margin-bottom:2px;">RUC: {prov['ruc']} | C.I.: {prov['ci']}</div>
         <div class="firma-box">&nbsp;</div>
         <div style="font-size:8px;margin-top:2px;text-align:center;">Firma electrónica del proveedor</div>
@@ -452,7 +461,7 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
 
   <p style="font-size:10px;margin-bottom:8px;text-align:justify;">
     Yo, <strong>{prov['representante']}</strong>, con C.I. <strong>{prov['ci']}</strong>,
-    en calidad de representante / proveedor de <strong>{prov['nombre']}</strong>,
+    en calidad de representante / proveedor de <strong>{razon}</strong>,
     RUC <strong>{prov['ruc']}</strong>, en pleno uso de mis facultades legales,
     declaro bajo juramento que:
   </p>
@@ -487,6 +496,9 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
 </body>
 </html>
 """
+    if not nco.get("incluir_carta", True):
+        html = html.split("<!-- ═══════════ CARTA ANTI-LAVADO ═══════════ -->")[0] + "</body>\n</html>\n"
+    return html
 
 # ── Firma PDF ─────────────────────────────────────────────────────────────────
 
@@ -524,7 +536,7 @@ def firmar_pdf(pdf_unsigned: Path, pdf_signed: Path):
         if "CARTA DE DECLARACIÓN" in doc[i].get_text():
             carta_idx = i
             break
-    proforma_idx = (carta_idx - 1) if carta_idx else 0
+    proforma_idx = (carta_idx - 1) if carta_idx is not None else n - 1
     carta_last_idx = (n - 1) if carta_idx is not None else None
 
     def firma_box(page_idx: int, default: tuple) -> tuple:

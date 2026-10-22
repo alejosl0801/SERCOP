@@ -2,7 +2,6 @@
   "version": "2.0",
   "moneda": "USD",
   "notas": "Las recargas usan precio_por_libra * capacidad_lbs. Las adquisiciones tienen precio fijo por tener costo de cilindro variable.",
-
   "proveedor": {
     "nombre": "PREVIFUEGO",
     "ruc": "0952773976001",
@@ -10,21 +9,21 @@
     "ci": "0952773976",
     "email": "alejosl0801@gmail.com",
     "telefono": "",
-    "direccion": "Guayaquil, Ecuador"
+    "direccion": "Guayaquil, Ecuador",
+    "razon_social": "LOPEZ MEJIA ALEJANDRO ALBERTO",
+    "nombre_comercial": "PREVIFUEGO"
   },
-
   "tarifas_por_libra": {
-    "recarga_PQS": 0.70,
-    "recarga_CO2": 0.70
+    "recarga_PQS": 0.7,
+    "recarga_CO2": 0.7
   },
-
   "adquisiciones": [
     {
       "id": "adq_pqs_10",
       "agente": "PQS",
       "capacidad_lbs": 10,
       "descripcion": "Extintor PQS 10 lbs (nuevo)",
-      "precio_unitario": 16.00,
+      "precio_unitario": 16.0,
       "notas": "Con manómetro, certificado UL/FM"
     },
     {
@@ -32,7 +31,7 @@
       "agente": "PQS",
       "capacidad_lbs": 20,
       "descripcion": "Extintor PQS 20 lbs (nuevo)",
-      "precio_unitario": 22.00,
+      "precio_unitario": 22.0,
       "notas": ""
     },
     {
@@ -40,7 +39,7 @@
       "agente": "PQS",
       "capacidad_lbs": 50,
       "descripcion": "Extintor PQS 50 lbs (nuevo)",
-      "precio_unitario": 168.00,
+      "precio_unitario": 168.0,
       "notas": ""
     },
     {
@@ -48,7 +47,7 @@
       "agente": "PQS",
       "capacidad_lbs": 150,
       "descripcion": "Extintor PQS 150 lbs (nuevo)",
-      "precio_unitario": 220.00,
+      "precio_unitario": 220.0,
       "notas": ""
     },
     {
@@ -56,7 +55,7 @@
       "agente": "CO2",
       "capacidad_lbs": 10,
       "descripcion": "Extintor CO2 10 lbs (nuevo)",
-      "precio_unitario": 39.00,
+      "precio_unitario": 39.0,
       "notas": "Sin manómetro — agente CO2"
     },
     {
@@ -64,7 +63,7 @@
       "agente": "CO2",
       "capacidad_lbs": 20,
       "descripcion": "Extintor CO2 20 lbs (nuevo)",
-      "precio_unitario": 88.00,
+      "precio_unitario": 88.0,
       "notas": ""
     },
     {
@@ -72,7 +71,7 @@
       "agente": "CO2",
       "capacidad_lbs": 50,
       "descripcion": "Extintor CO2 50 lbs (nuevo)",
-      "precio_unitario": 320.00,
+      "precio_unitario": 320.0,
       "notas": "Sin manómetro — agente CO2"
     },
     {
@@ -80,7 +79,7 @@
       "agente": "AGUA",
       "capacidad_lbs": 2.5,
       "descripcion": "Extintor de agua 2.5 galones (nuevo)",
-      "precio_unitario": 45.00,
+      "precio_unitario": 45.0,
       "notas": "Para fuegos clase A"
     },
     {
@@ -88,7 +87,7 @@
       "agente": "AFFF",
       "capacidad_lbs": 2.5,
       "descripcion": "Extintor AFFF/espuma 2.5 galones (nuevo)",
-      "precio_unitario": 55.00,
+      "precio_unitario": 55.0,
       "notas": "Para fuegos clase A y B"
     }
   ]
