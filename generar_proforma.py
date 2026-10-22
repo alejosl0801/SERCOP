@@ -14,6 +14,7 @@ Los ítems sin match se reportan como PENDIENTES y se envía alerta por email.
 import argparse
 import base64
 import json
+from decimal import Decimal, ROUND_HALF_UP
 import os
 import re
 import smtplib
@@ -104,6 +105,10 @@ def detect_tipo(text: str) -> str:
         return "adquisicion"
     return "desconocido"
 
+def r2(x) -> float:
+    """Redondeo monetario a 2 decimales con ROUND_HALF_UP (no el redondeo bancario de round())."""
+    return float(Decimal(str(x)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP))
+
 # ── Motor de precios ──────────────────────────────────────────────────────────
 
 class ResultadoMatch:
@@ -112,7 +117,7 @@ class ResultadoMatch:
         self.unidad        = unidad
         self.cantidad      = cantidad
         self.precio_unitario = precio
-        self.subtotal      = round(cantidad * precio, 2) if matched else 0.0
+        self.subtotal      = r2(Decimal(str(cantidad)) * Decimal(str(precio))) if matched else 0.0
         self.notas         = notas
         self.matched       = matched
         self.pendiente_tipo = pendiente_tipo  # descripción del problema para el aviso
@@ -135,7 +140,7 @@ def calcular_precio(item: dict, tarifa_lb: float | None = None) -> ResultadoMatc
     if tipo == "recarga" and agente in ("PQS", "CO2") and lbs:
         tarifa_key = f"recarga_{agente}"
         tarifa     = tarifa_lb if tarifa_lb is not None else TARIFAS_LB.get(tarifa_key, 0.70)
-        precio     = round(tarifa * lbs, 2)
+        precio     = r2(Decimal(str(tarifa)) * Decimal(str(lbs)))
         lbs_disp   = int(lbs) if lbs == int(lbs) else lbs
         desc_clean = f"Recarga de extintor {agente} {lbs_disp} lbs"
         notas      = f"Tarifa: ${tarifa}/lb × {lbs_disp} lbs"
@@ -248,8 +253,8 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
     fecha   = fecha_es()
 
     subtotal = sum(f.subtotal for f in filas)
-    iva      = round(subtotal * IVA_RATE, 2)
-    total    = round(subtotal + iva, 2)
+    iva      = r2(Decimal(str(subtotal)) * Decimal(str(IVA_RATE)))
+    total    = r2(Decimal(str(subtotal)) + Decimal(str(iva)))
 
     rows_html = ""
     usa_cpc = any(getattr(f, "cpc", None) for f in filas)
@@ -390,9 +395,9 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
   <div class="section-title">CONDICIONES COMERCIALES</div>
   <table style="margin-bottom:6px;">
     <tr>
-      <td style="border:1px solid #555;width:33%;"><span class="ref">Forma de pago:</span>Contra entrega</td>
+      <td style="border:1px solid #555;width:33%;"><span class="ref">Forma de pago:</span>{nco.get("forma_pago", "Contra entrega")}</td>
       <td style="border:1px solid #555;width:33%;"><span class="ref">Plazo entrega:</span>{nco.get("plazo_entrega", "5 días hábiles")}</td>
-      <td style="border:1px solid #555;width:34%;"><span class="ref">Validez oferta:</span>30 días</td>
+      <td style="border:1px solid #555;width:34%;"><span class="ref">Validez oferta:</span>{nco.get("vigencia_dias", 30)} días</td>
     </tr>
   </table>
 
@@ -404,7 +409,7 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
           <li>Extintores PQS: cilindro de acero, válvula de seguridad, manómetro y manguera. Certificación UL/FM.</li>
           <li>Extintores CO2: cilindro de alta presión, sin manómetro (agente gaseoso). Certificación UL/FM.</li>
           <li>Recargas: incluyen prueba hidrostática, carga certificada y etiqueta vigente según INEN 739.</li>
-          <li>Garantía técnica: 1 año contra defectos de fabricación.</li>
+          <li>{nco.get("garantia", "Garantía técnica: 1 año contra defectos de fabricación.")}</li>
         </ul>
       </td>
     </tr>
@@ -636,8 +641,8 @@ def procesar_nco(nco: dict, firmar: bool = True, forzar: bool = False) -> dict:
         guardar_procesado(codigo)
 
     subtotal = sum(f.subtotal for f in filas)
-    iva      = round(subtotal * IVA_RATE, 2)
-    total    = round(subtotal + iva, 2)
+    iva      = r2(Decimal(str(subtotal)) * Decimal(str(IVA_RATE)))
+    total    = r2(Decimal(str(subtotal)) + Decimal(str(iva)))
 
     return {
         "codigo":             codigo,
