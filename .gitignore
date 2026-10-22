@@ -8,3 +8,11 @@ nco-vistos.json
 procesados.json
 monitor.log
 *.p12
+
+# Vigilante local (estado y logs, no se suben)
+vistos.json
+estado_vigilante.json
+vigilante.log
+ALERTAS.txt
+alerta_texto.txt
+ntfy_topic.txt
