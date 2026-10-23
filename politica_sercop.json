@@ -1,0 +1,37 @@
+{
+  "comentario": "Política comercial que usa preparar_proceso.py. Editar aquí, no en el código. Todo valor marcado 'por confirmar' lo debe decidir Alejandro.",
+
+  "recarga_tarifa_por_libra": {
+    "fuente": "Alejandro, chat 2026-10-22: ~0.80/lb con pocos extintores (~10); 0.75 o 0.70/lb con ~50 o más; igual PQS y CO2. catalogo_empresas.pdf: PQS 0.80, CO2 0.75.",
+    "estado": "tramos exactos por confirmar",
+    "tramos": [
+      {"hasta_extintores": 20,     "tarifa": 0.80},
+      {"hasta_extintores": 99,     "tarifa": 0.75},
+      {"hasta_extintores": 999999, "tarifa": 0.70}
+    ]
+  },
+
+  "extintores_nuevos": {
+    "estado": "columna de precio para entidades públicas por confirmar",
+    "orden_de_fuentes": ["precios_json_sercop", "azur_clientes_nuevos"],
+    "nota": "precios_json_sercop = precedente ATM Daule (PQS10 $16, PQS20 $22, CO2 10 $39). Si no existe ahí, se usa 'PRECIO UNITARIO CLIENTES NUEVOS' de STOCK IMP.xlsx. Siempre se muestra costo, margen y stock real."
+  },
+
+  "servicios_con_precio_conocido": [
+    {"clave": "recarga extintor agua presurizada 2.5 gal", "precio": 8.00,
+     "fuente": "Alejandro, ISSFA 2026-08-19"},
+    {"clave": "mantenimiento de manometros", "precio": 2.80,
+     "fuente": "Alejandro, Chobo 2026-08-21"}
+  ],
+
+  "proforma": {
+    "vigencia_por_defecto_dias": 30,
+    "incluir_carta_laft": false,
+    "nota_carta_laft": "La carta LAFT es una declaración 'bajo juramento' firmada a nombre de Alejandro; solo se incluye si él lo autoriza o la entidad la pide."
+  },
+
+  "alertas": {
+    "plazo_corto_dias": 5,
+    "margen_minimo_nuevos_pct": 10
+  }
+}

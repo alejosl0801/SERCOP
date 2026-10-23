@@ -20,6 +20,7 @@ LOG = BASE / "vigilante.log"
 ALERTAS = BASE / "ALERTAS.txt"
 TEXTO = BASE / "alerta_texto.txt"
 NTFY = BASE / "ntfy_topic.txt"
+COLA = BASE / "cola_preparar.jsonl"
 
 NCO_URL = "https://compraspublicas.gob.ec/ProcesoContratacion/compras/NCO/FrmNCOListado.cpe"
 PORTAL_URL = "https://www.compraspublicas.gob.ec/ProcesoContratacion/compras/NCO/FrmNCOListado.cpe"
@@ -176,6 +177,22 @@ def push_celular(titulo, cuerpo):
         log(f"ntfy fallo: {e}")
 
 
+def encolar_preparacion(nuevos):
+    """Deja en cola la preparación del borrador (la ejecuta la tarea SERCOP_Preparar, sin límite de 10 min)."""
+    try:
+        with open(COLA, "a", encoding="utf-8") as fh:
+            for f in nuevos:
+                fh.write(json.dumps({"codigo": f["codigo"], "estado": "En Curso",
+                                     "firmar": f["tipo"] == "Ínfima Cuantía"}, ensure_ascii=False) + "\n")
+        r = subprocess.run(["schtasks", "/run", "/tn", "SERCOP_Preparar"], capture_output=True, text=True)
+        if r.returncode != 0:
+            log(f"schtasks /run SERCOP_Preparar fallo: {r.stderr.strip() or r.stdout.strip()}")
+        else:
+            log(f"preparación en cola: {[f['codigo'] for f in nuevos]}")
+    except Exception as e:
+        log(f"no se pudo encolar la preparación: {e}")
+
+
 def alertar(nuevos):
     bloques = []
     for f in nuevos:
@@ -195,6 +212,7 @@ def alertar(nuevos):
     banner = "NUEVO PROCESO DE EXTINTORES EN SERCOP" if n == 1 else f"{n} NUEVOS PROCESOS DE EXTINTORES EN SERCOP"
     mostrar_popup(banner, "Red", cuerpo)
     push_celular(banner, cuerpo[:900])
+    encolar_preparacion(nuevos)
 
 
 def registrar_fallo(detalle):

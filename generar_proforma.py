@@ -31,8 +31,35 @@ NCO_JSON     = BASE_DIR / "nco-guayas.json"
 PROCESADOS   = BASE_DIR / "procesados.json"
 LOGO_PATH    = BASE_DIR / "logo.png.jpeg"
 OUTPUT_DIR   = BASE_DIR / "output"
-P12_PATH     = "/root/.claude/uploads/62158717-1a5c-565b-9ca5-eaa58166a747/73c7eb7f-14775814_identity_0952773976.p12"
-P12_PASS     = os.environ.get("P12_PASS", "").encode()
+_P12_CI      = "/root/.claude/uploads/62158717-1a5c-565b-9ca5-eaa58166a747/73c7eb7f-14775814_identity_0952773976.p12"
+_P12_LOCAL   = r"C:\Users\HP\Dropbox\Previfuego\OTROS IMPORTANTE\FIRMA DIGITAL\14775814_identity_0952773976.p12"
+_P12_DPAPI   = Path.home() / ".sercop" / "p12.dpapi"   # clave cifrada con DPAPI (solo este usuario de Windows la descifra)
+
+
+def _resolver_p12_path() -> str:
+    for c in (os.environ.get("P12_PATH", ""), _P12_CI, _P12_LOCAL):
+        if c and Path(c).exists():
+            return c
+    return _P12_CI
+
+
+def _resolver_p12_pass() -> bytes:
+    if os.environ.get("P12_PASS"):
+        return os.environ["P12_PASS"].encode()
+    if sys.platform == "win32" and _P12_DPAPI.exists():
+        import subprocess
+        cmd = ("$s = Get-Content -LiteralPath '%s' | ConvertTo-SecureString; "
+               "[Runtime.InteropServices.Marshal]::PtrToStringAuto("
+               "[Runtime.InteropServices.Marshal]::SecureStringToBSTR($s))" % _P12_DPAPI)
+        r = subprocess.run(["powershell", "-NoProfile", "-Command", cmd],
+                           capture_output=True, text=True, timeout=30)
+        if r.returncode == 0 and r.stdout.strip():
+            return r.stdout.strip().encode()
+    return b""
+
+
+P12_PATH     = _resolver_p12_path()
+P12_PASS     = _resolver_p12_pass()
 
 OUTPUT_DIR.mkdir(exist_ok=True)
 
