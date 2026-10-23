@@ -170,42 +170,9 @@ def campos_portal(texto):
 # ─────────────────────────── 2. LECTURA DE ANEXOS ─────────────────────────────
 
 def leer_anexo(ruta):
-    """Devuelve lista de (pagina, texto). Nunca lanza: un anexo ilegible se reporta."""
-    ext = ruta.suffix.lower()
-    try:
-        if ext == ".pdf":
-            import fitz
-            d = fitz.open(str(ruta))
-            return [(i + 1, p.get_text()) for i, p in enumerate(d)]
-        if ext in (".docx", ".dotx"):
-            import docx
-            d = docx.Document(str(ruta))
-            partes = [p.text for p in d.paragraphs if p.text.strip()]
-            for t in d.tables:
-                for r in t.rows:
-                    vistos = []
-                    for c in r.cells:
-                        tx = c.text.strip().replace("\n", " ")
-                        if tx and tx not in vistos:
-                            vistos.append(tx)
-                    if vistos:
-                        partes.append(" | ".join(vistos))
-            return [(1, "\n".join(partes))]
-        if ext in (".xlsx", ".xlsm"):
-            import openpyxl
-            wb = openpyxl.load_workbook(str(ruta), data_only=True, read_only=True)
-            out = []
-            for ws in wb.worksheets[:6]:
-                filas = []
-                for row in ws.iter_rows(max_row=400, values_only=True):
-                    cel = [str(c) for c in row if c is not None and str(c).strip()]
-                    if cel:
-                        filas.append(" | ".join(cel))
-                out.append((ws.title, "\n".join(filas)))
-            return out
-    except Exception as e:
-        return [(0, f"[ERROR AL LEER: {e}]")]
-    return [(0, "[FORMATO NO LEGIBLE AUTOMÁTICAMENTE]")]
+    """Delegado en lector_anexos (PDF+OCR, Word/.doc vía LibreOffice, Excel, imágenes)."""
+    import lector_anexos
+    return lector_anexos.leer(ruta)
 
 
 # ─────────────────────────── 3. REQUISITOS Y ALERTAS ──────────────────────────
@@ -292,6 +259,42 @@ VALIDADORES = {
 }
 
 
+OBLIGACION = re.compile(
+    r"\b(deber[aá]n?|debe|obligatori[oa]s?|obligad[oa]s?|exig|requiere[n]?|se requiere|presentar|adjuntar|entregar[aá]?n?|"
+    r"incluir|incluye[n]?|contar[aá]n? con|cumplir|certificad|sin costo|a su cargo|por cuenta del|prohibid|no se aceptar)",
+    re.I)
+PLANTILLA = re.compile(r"\b(COLOCAR|COMPLETAR|INDICAR|ESTABLECER|SELECCIONAR)\b|\(Caso de|n[uú]mero de d[ií]as|xxxx", re.I)
+
+
+RUIDO_LEGAL = re.compile(r"\b(Ley|Reglamento|Art[ií]culo|Resoluci[oó]n|Servicio Nacional de Contrataci[oó]n|audiencias?|herramienta inform[aá]tica)\b")
+
+
+def obligaciones(corpus, maximo=150):
+    """Red de seguridad independiente de las palabras clave: TODA frase de los anexos de la entidad que
+    impone algo al proveedor (deberá, obligatorio, presentar, incluir…). El TDR va primero; se omiten citas legales genéricas."""
+    def prioridad(fuente):
+        f = norm(fuente)
+        return 0 if ("terminos de referencia" in f or "tdr" in f or "especificacion" in f) else 1
+    por_doc = {}
+    for fuente, pag, texto in corpus:
+        if fuente.startswith("PORTAL") or texto.startswith("["):
+            continue
+        por_doc.setdefault(fuente, []).append((pag, aplanar(texto)))
+    vistas, out = set(), []
+    for fuente in sorted(por_doc, key=prioridad):
+        for pag, texto in por_doc[fuente]:
+            for f in re.split(r"(?<=[.;:])\s+", texto):
+                f = f.strip()
+                if not (25 <= len(f) <= 600) or not OBLIGACION.search(f) or PLANTILLA.search(f) or RUIDO_LEGAL.search(f):
+                    continue
+                h = norm(f)[:80]
+                if h in vistas:
+                    continue
+                vistas.add(h)
+                out.append({"fuente": fuente.split(" [")[0], "pagina": pag, "texto": f})
+    return out[:maximo]
+
+
 def analizar(corpus, portal):
     """corpus: lista de (fuente, pagina, texto). Devuelve campos clave y alertas con evidencia.
     Los anexos de la entidad (TDR) tienen prioridad sobre el texto del portal."""
@@ -328,6 +331,23 @@ def analizar(corpus, portal):
     pz = re.search(r"(\d{1,3})\s*d[ií]as\s*(calendario|h[aá]biles|laborables)?", campos.get("plazo", ""), re.I)
     campos["plazo_dias"] = (int(pz.group(1)), (pz.group(2) or "").lower()) if pz else None
 
+    campos["obligaciones"] = obligaciones(corpus)
+
+    import extractor_condiciones as ec
+    cond = ec.resolver(ec.extraer([c for c in corpus if not c[0].startswith("PORTAL")]))
+    campos["condiciones"] = cond
+    if cond["vigencia"]:
+        e = cond["vigencia"]["elegido"]
+        campos["vigencia_dias"] = e["dias"]
+    if cond["plazo"]:
+        e = cond["plazo"]["elegido"]
+        campos["plazo_dias"] = (e["dias"], e["tipo"])
+        campos["plazo"] = e["cita"]
+    if cond["garantia"]:
+        campos["garantia_meses"] = cond["garantia"]["elegido"]["dias"] // 30
+    else:
+        campos["garantia_meses"] = None
+
     alertas = []
     for clave, nivel, titulo, patron, accion in REGLAS:
         rx = re.compile(patron, re.I)
@@ -358,6 +378,19 @@ def analizar(corpus, portal):
     for f in sorted(set(ilegibles)):
         alertas.insert(0, {"clave": "ilegible", "nivel": "ATENCIÓN", "titulo": f"No pude leer el texto de: {f}",
                            "accion": "Puede ser un PDF escaneado: leerlo a mano.", "evidencia": []})
+    nombres = {"plazo": "plazo de ejecución", "vigencia": "vigencia de la oferta", "garantia": "garantía técnica"}
+    for campo, v in cond.items():
+        if v and v["contradiccion"]:
+            vistos_c, ev = set(), []
+            for cd in sorted(v["candidatos"], key=lambda x: x["dias"]):
+                k = (cd["valor"], cd["unidad"], cd["fuente"])
+                if k not in vistos_c:
+                    vistos_c.add(k)
+                    ev.append({"fuente": cd["fuente"], "pagina": cd["pagina"], "texto": cd["cita"]})
+            regla = "el MENOR (más exigente)" if campo == "plazo" else "el MAYOR"
+            alertas.append({"clave": "contradiccion_" + campo, "nivel": "ATENCIÓN",
+                            "titulo": f"Los documentos se contradicen en {nombres[campo]}",
+                            "accion": f"Apliqué {regla} en el borrador; confirma con la entidad si hay duda.", "evidencia": ev[:4]})
     orden = {"CRÍTICO": 0, "ATENCIÓN": 1, "INFO": 2}
     alertas.sort(key=lambda a: orden[a["nivel"]])
     return campos, alertas
@@ -556,6 +589,9 @@ th{{background:#1a3a5c;color:#fff}} .n{{font-size:11.5px;color:#444}} pre{{backg
 <h2>Alertas ({len(crit)} críticas, {len(aten)} de atención)</h2>
 {''.join(bloque_alerta(a) for a in alertas) or '<p>Sin alertas detectadas.</p>'}
 
+<h2>Obligaciones que impone la entidad ({len(campos.get('obligaciones', []))} frases; lectura rápida, independiente de las alertas)</h2>
+<details><summary>Ver todas</summary><ul>{''.join('<li><b>' + esc(o['fuente']) + (' p.' + str(o['pagina'])) + ':</b> ' + esc(o['texto']) + '</li>' for o in campos.get('obligaciones', []))}</ul></details>
+
 <h2>Pendientes de tu decisión</h2>
 <ul>{''.join('<li>' + esc(p) + '</li>' for p in pendientes) or '<li>Ninguno automático.</li>'}
 <li>Tarifa de recarga aplicada: <b>${nco.get('tarifa_lb')}/lb</b> según el volumen ({res.get('n_recargas')} recargas). Política en politica_sercop.json.</li>
@@ -639,13 +675,19 @@ def preparar(codigo, estado="En Curso", salida=None, firmar=True):
     vig = campos["vigencia_dias"] or pol["proforma"]["vigencia_por_defecto_dias"]
     if not campos["vigencia_dias"]:
         pendientes.append(f"No encontré la vigencia de la oferta en el TDR: puse {vig} días por defecto. Verifícala.")
-    plazo = campos["plazo"] or "Conforme a los términos de referencia de la entidad contratante."
-    if not campos["plazo"]:
+    pd_ = campos.get("plazo_dias")
+    plazo = (f"{pd_[0]} días{(' ' + pd_[1]) if pd_[1] else ''}, contados conforme a lo establecido en los términos de referencia."
+             if pd_ else "Conforme a los términos de referencia de la entidad contratante.")
+    if not pd_:
         pendientes.append("No encontré el plazo de ejecución en el TDR: revisar manualmente.")
     pago = campos["pago"] or pc["forma_pago_portal"] or "Conforme a los términos de referencia de la entidad contratante."
-    anios = campos["garantia_anios"]
-    garantia = (f"Garantía técnica: {anios} año{'s' if anios and anios > 1 else ''} por defectos de taller, conforme al TDR."
-                if anios else "Garantía técnica conforme al TDR de la entidad contratante.")
+    gm = campos.get("garantia_meses")
+    garantia = (f"Garantía técnica de {gm} meses por defectos de taller y funcionamiento, conforme al TDR."
+                if gm and gm % 12 else
+                f"Garantía técnica de {gm // 12} año{'s' if gm // 12 > 1 else ''} por defectos de taller y funcionamiento, conforme al TDR."
+                if gm else "Garantía técnica conforme al TDR de la entidad contratante.")
+    if not gm:
+        pendientes.append("No encontré el periodo de garantía técnica en el TDR: revisa el texto de garantía de la proforma.")
     if re.search(r"describir", norm(campos.get("garantia", ""))):
         pendientes.append("El TDR pide describir cómo se responde por la garantía: revisa el texto de garantía de la proforma.")
 
