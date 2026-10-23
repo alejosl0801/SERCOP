@@ -595,7 +595,7 @@ def firmar_pdf(pdf_unsigned: Path, pdf_signed: Path):
         pdf_pass1.unlink(missing_ok=True)
     else:
         # Solo 2 páginas — renombrar pass1 como firmado final
-        pdf_pass1.rename(pdf_signed)
+        pdf_pass1.replace(pdf_signed)
 
     print(f"  ✅ Firmado: {pdf_signed.name}")
 
