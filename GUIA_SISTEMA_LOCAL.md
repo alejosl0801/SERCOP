@@ -89,3 +89,23 @@ py vigilante_sercop.py --seed        (registra lo que hay hoy sin avisar)
 
 - 2026-10-23: se perdió el plazo de la Prefectura del Guayas (proforma firmada pero nunca registrada en el portal). Origen del sistema de preparación automática.
 - 2026-10-23: se descartó dejar que las sesiones envíen correos; solo borradores.
+
+## 11. Mejoras añadidas (2026-10-23, v3)
+
+| Mejora | Cómo usarla |
+|---|---|
+| Decisiones | `py decidir.py NIC-… participa\|descarta\|enviado\|ganado\|perdido "nota"`; `py decidir.py --lista`. El vigilante no vuelve a alertar de procesos resueltos. |
+| Recordatorio | Si a un proceso relevante sin decisión le quedan menos de 24 h, el vigilante repite el aviso cada hora (ventana + celular). |
+| Descarte automático | Si pide notarización o declaración juramentada, el aviso sale amarillo "DESCARTADO AUTOMATICO" y queda `descarte_auto`. Para participar igual: `py decidir.py NIC-… participa`. |
+| Botón "Copiar valores" | En `00 RESUMEN…html`: copia los valores unitarios, uno por línea, en orden del portal. |
+| Checklist final | En el mismo resumen, antes de enviar. |
+| `SUBIR_ESTE.pdf` | Copia del PDF listo, con nombre fijo, para la segunda etapa del portal. |
+| Botón "ABRIR RESUMEN" | En la ventana del borrador listo. |
+| Aviso al celular | Canal ntfy en `ntfy_topic.txt` (privado, local). Instalar la app ntfy y suscribirse a ese nombre. |
+| Revisión cada 10 min | `SERCOP_Vigilante` (antes 30). |
+| Más palabras clave | Detecta también PQS, CO2 y polvo químico en la descripción. |
+| Sesión dedicada | `py sesion_sercop.py login` (entras tú una vez en un Chrome aparte); `py sesion_sercop.py abrir URL` para abrir la proforma con esa sesión. **No verificado** cuánto dura la sesión del portal. |
+| Respaldo diario | `SERCOP_Respaldo` 21:30 → `Dropbox\Previfuego\RESPALDO_SERCOP\` (conserva 14). |
+| Reporte semanal | `SERCOP_ReporteSemanal`, lunes 08:00 → `ESTADO\_REPORTES\`. |
+
+Pendientes: acta/nota de entrega automática desde la orden de compra, factura por API y entrada a cobros (dependen de las sesiones FACTURADOR/JARVIS), historial de precios de la competencia (el portal solo muestra RUC de los proveedores, no precios).
