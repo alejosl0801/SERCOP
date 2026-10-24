@@ -6,7 +6,8 @@ $lineas = Get-Content -LiteralPath (Join-Path $PSScriptRoot 'alerta_texto.txt') 
 $banner = $lineas[0]
 $color  = $lineas[1]
 $url    = $lineas[2]
-$cuerpo = ($lineas | Select-Object -Skip 3) -join "`r`n"
+$url2   = $lineas[3]
+$cuerpo = ($lineas | Select-Object -Skip 4) -join "`r`n"
 
 $form = New-Object System.Windows.Forms.Form
 $form.Text = 'PREVIFUEGO - Alerta SERCOP'
@@ -47,6 +48,15 @@ $btnOk.Font = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.Fon
 $btnOk.Add_Click({ $form.Close() })
 
 $panel.Controls.Add($btnWeb)
+if ($url2 -and $url2.Trim() -ne '') {
+    $btnRes = New-Object System.Windows.Forms.Button
+    $btnRes.Text = 'ABRIR RESUMEN'
+    $btnRes.Size = New-Object System.Drawing.Size(260, 54)
+    $btnRes.Location = New-Object System.Drawing.Point(360, 14)
+    $btnRes.Font = New-Object System.Drawing.Font('Segoe UI', 12, [System.Drawing.FontStyle]::Bold)
+    $btnRes.Add_Click({ Start-Process $url2 })
+    $panel.Controls.Add($btnRes)
+}
 $panel.Controls.Add($btnOk)
 
 $lbl = New-Object System.Windows.Forms.Label

@@ -572,6 +572,7 @@ def escribir_resumen(carpeta, num, portal_campos, nco, campos, alertas, auditori
                   f"<td>{esc(a.get('fuente'))}</td><td class='n'>{esc(info)}"
                   f"{'<br><b style=color:#b00020>' + esc(extra) + '</b>' if extra else ''}</td></tr>")
 
+    valores_portal = "\n".join(("%.2f" % a["precio"]) if a["precio"] is not None else "" for a in auditoria)
     tabla_portal = "\n".join(f"{i:>2}. {a['cantidad']:>6g} x {esc(a['descripcion'])}" for i, a in enumerate(auditoria, 1))
     h = f"""<!doctype html><html lang="es"><head><meta charset="utf-8"><title>{esc(portal_campos['entidad'])} - resumen</title>
 <style>body{{font-family:Segoe UI,Arial;margin:24px;max-width:1100px;color:#222}}
@@ -585,6 +586,18 @@ th{{background:#1a3a5c;color:#fff}} .n{{font-size:11.5px;color:#444}} pre{{backg
 <h1>{esc(portal_campos['entidad'])}</h1>
 <div class="banner"><b>{nivel}</b> · {esc(codigo_de(nco))} · límite {esc(portal_campos['limite'])} · <b>faltan {esc(quedan)}</b></div>
 <p>{esc(portal_campos['objeto'])}</p>
+
+<button onclick="navigator.clipboard.writeText(document.getElementById('vals').value).then(()=>{{this.textContent='COPIADO ✔'}})"
+ style="font-size:16px;padding:10px 18px;margin:6px 0;cursor:pointer">📋 Copiar valores unitarios (uno por línea, en orden del portal)</button>
+<textarea id="vals" style="position:absolute;left:-9999px">{valores_portal}</textarea>
+<details open><summary><b>Checklist antes de enviar</b></summary><ul style="list-style:none;padding-left:4px">
+<li>☐ Leí las alertas críticas y de atención</li>
+<li>☐ Revisé cantidades y valores unitarios contra el portal</li>
+<li>☐ Plazo, vigencia ({esc(campos.get('vigencia_dias') or '?')} días) y garantía coinciden con el TDR</li>
+<li>☐ Adjunto RUC y anexos que pida la entidad (ver 'Obligaciones')</li>
+<li>☐ PDF firmado: <code>SUBIR_ESTE.pdf</code> (segunda etapa del portal)</li>
+<li>☐ Acepté términos y pulsé el botón final de la segunda etapa</li>
+<li>☐ Marqué la decisión: <code>py decidir.py {esc(codigo_de(nco))} enviado</code></li></ul></details>
 
 <h2>Alertas ({len(crit)} críticas, {len(aten)} de atención)</h2>
 {''.join(bloque_alerta(a) for a in alertas) or '<p>Sin alertas detectadas.</p>'}
@@ -726,6 +739,7 @@ def preparar(codigo, estado="En Curso", salida=None, firmar=True):
     pdf = Path(res["pdf"]) if res.get("pdf") else None
     if pdf and pdf.exists():
         firmado = pdf.name.endswith("_signed.pdf")
+        shutil.copy2(pdf, carpeta / "SUBIR_ESTE.pdf")
         shutil.copy2(pdf, carpeta / (("BORRADOR FIRMADO - " if firmado else "BORRADOR SIN FIRMAR - ") + base_nombre + ("-signed" if firmado else "") + ".pdf"))
     if RUC_SRI.exists():
         shutil.copy2(RUC_SRI, carpeta / "RUC SRI - LOPEZ MEJIA ALEJANDRO.pdf")
@@ -787,7 +801,20 @@ def aviso_final(r):
               "NARANJA": "BORRADOR LISTO - REVISA LAS ALERTAS",
               "VERDE": "BORRADOR LISTO PARA REVISAR"}[r["nivel"]]
     color = {"ROJO": "Red", "NARANJA": "DarkOrange", "VERDE": "DarkGreen"}[r["nivel"]]
-    mostrar_popup(banner, color, "\n".join(cuerpo))
+    auto = [x for x in r["criticas"] if "NOTARIZADO" in x or "JURAMENTADA" in x]
+    if auto:
+        import decisiones
+        decisiones.registrar(r["codigo"], "descarte_auto", "; ".join(auto))
+        banner = "DESCARTADO AUTOMATICO: " + ("pide notarizacion" if any("NOTARIZADO" in x for x in auto) else "pide declaracion juramentada")
+        color = "Goldenrod"
+        cuerpo.insert(0, "Lo descarté porque exige algo que decidiste no hacer. Si quieres participar igual:\n"
+                         f"  py decidir.py {r['codigo']} participa\n")
+    mostrar_popup(banner, color, "\n".join(cuerpo), url2=r.get("html", ""))
+    try:
+        from vigilante_sercop import push_celular
+        push_celular(banner, "\n".join(cuerpo)[:900])
+    except Exception:
+        log("push celular: " + traceback.format_exc())
 
 
 def procesar_cola():

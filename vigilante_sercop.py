@@ -6,6 +6,7 @@ Uso manual:  py vigilante_sercop.py            -> revisa y avisa
              py vigilante_sercop.py --seed     -> solo registra lo que hay hoy, sin avisar
 """
 import json
+import decisiones
 import subprocess
 import sys
 import traceback
@@ -27,7 +28,7 @@ PORTAL_URL = "https://www.compraspublicas.gob.ec/ProcesoContratacion/compras/NCO
 UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36"
 
 TIPOS = [("54092", "Ínfima Cuantía"), ("54089", "Necesidad de Contratación")]
-TERMS = ["extintor", "recarga", "incendio"]
+TERMS = ["extintor", "recarga", "incendio", "pqs", "contra incendio"]
 CERCA = ("GUAYAQUIL", "SAMBORONDON", "SAMBORONDÓN", "DAULE", "DURAN", "DURÁN")
 FALLOS_PARA_AVISAR = 6
 
@@ -121,7 +122,7 @@ def scrape():
                         if not any(c in (prov + " " + entidad).upper() for c in CERCA):
                             continue
                         d = desc.lower()
-                        if "extintor" in d:
+                        if any(k in d for k in ("extintor", "pqs", "polvo quimico", "polvo químico", "co2")):
                             nivel = "relevante"
                         elif "incendio" in d or "recarga" in d:
                             nivel = "info"
@@ -151,8 +152,8 @@ def faltan(lim):
     return f"{d} d {h} h" if d else f"{h} h {int((s % 3600) // 60)} min"
 
 
-def mostrar_popup(banner, color, cuerpo):
-    TEXTO.write_text(f"{banner}\n{color}\n{PORTAL_URL}\n{cuerpo}", encoding="utf-8-sig")
+def mostrar_popup(banner, color, cuerpo, url2=""):
+    TEXTO.write_text(f"{banner}\n{color}\n{PORTAL_URL}\n{url2}\n{cuerpo}", encoding="utf-8-sig")
     r = subprocess.run(["schtasks", "/run", "/tn", "SERCOP_Alerta"], capture_output=True, text=True)
     if r.returncode != 0:
         log(f"schtasks /run SERCOP_Alerta fallo: {r.stderr.strip() or r.stdout.strip()}")
@@ -191,6 +192,32 @@ def encolar_preparacion(nuevos):
             log(f"preparación en cola: {[f['codigo'] for f in nuevos]}")
     except Exception as e:
         log(f"no se pudo encolar la preparación: {e}")
+
+
+def recordar(filas, vistos):
+    """Recuerda cada hora los procesos relevantes sin decisión a los que les faltan menos de 24 h."""
+    ahora = datetime.now()
+    cambios = False
+    for f in filas:
+        if not (f["vigente"] and f["nivel"] == "relevante") or decisiones.resuelto(f["codigo"]):
+            continue
+        lim = f["limite_dt"]
+        if lim is None or (lim - ahora).total_seconds() > 24 * 3600:
+            continue
+        v = vistos.get(f["codigo"], {})
+        ult = v.get("recordatorio")
+        if ult and (ahora - datetime.fromisoformat(ult)).total_seconds() < 3600:
+            continue
+        v["recordatorio"] = ahora.isoformat(timespec="seconds")
+        vistos[f["codigo"]] = v
+        cambios = True
+        cuerpo = (f"RECORDATORIO: AUN SIN DECISION\nENTIDAD: {f['entidad']}\nCODIGO: {f['codigo']}\nOBJETO: {f['desc']}\n"
+                  f"LIMITE: {f['limite']}   (faltan {faltan(lim)})\n\nDecide: py decidir.py {f['codigo']} participa | descarta | enviado")
+        mostrar_popup(f"QUEDAN {faltan(lim).upper()} - DECIDE YA", "Red", cuerpo)
+        push_celular("Quedan " + faltan(lim), cuerpo[:600])
+        log(f"recordatorio {f['codigo']} faltan {faltan(lim)}")
+    if cambios:
+        guardar(VISTOS, vistos)
 
 
 def alertar(nuevos):
@@ -252,6 +279,8 @@ def main():
         return 0
     for f in nuevos_info:
         log(f"info (sin alerta) {f['tipo']} {f['codigo']} {f['desc'][:80]}")
+    recordar(filas, vistos)
+    nuevos_rel = [f for f in nuevos_rel if not decisiones.resuelto(f["codigo"])]
     if nuevos_rel:
         alertar(nuevos_rel)
     else:

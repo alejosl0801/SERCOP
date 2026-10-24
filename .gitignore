@@ -20,3 +20,7 @@ ntfy_topic.txt
 cola_preparar.jsonl
 preparar.log
 _descarga_tmp/
+
+decisiones.json
+sesion.log
+sesion_estado.txt
