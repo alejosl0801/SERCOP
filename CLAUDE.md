@@ -1,5 +1,7 @@
 # PREVIFUEGO — Sistema Automático SERCOP
 
+> **AVISO (2026-10-23):** este documento describe la versión antigua en la nube. La guía vigente del sistema local (vigilante, preparación automática, política comercial) es **GUIA_SISTEMA_LOCAL.md**. La clave del certificado se quitó de este archivo; el historial de git aún la conserva, así que conviene cambiarla.
+
 > Sistema de monitoreo y respuesta automática al portal de compras públicas de Ecuador.
 > Todo corre en GitHub Actions sin intervención manual.
 
@@ -69,7 +71,7 @@ PREVIFUEGO participa en procesos de Ínfima Cuantía (NCO) del portal de compras
 
 | Variable | Dónde vive | Qué es | Nunca hacer |
 |---|---|---|---|
-| `P12_PASS` | Env var + GitHub Secret | Contraseña del certificado digital | Nunca escribir `"Alejo123"` en código |
+| `P12_PASS` | Env var + GitHub Secret | Contraseña del certificado digital | Nunca escribir `"<CLAVE_P12>"` en código |
 | `P12_CERT_B64` | Solo GitHub Secret | Certificado P12 en base64 | Nunca commitear el archivo `.p12` |
 | `SERCOP_USER` | Env var + GitHub Secret | RUC del proveedor (0952773976001) | Nunca hardcodear en código |
 | `SERCOP_PASS` | Env var + GitHub Secret | Clave del portal SERCOP | Nunca en código |
@@ -366,13 +368,13 @@ Es el corazón del sistema. Transforma los datos de `nco-guayas.json` en un PDF 
 
 ```bash
 # Generar una proforma específica (firma incluida)
-P12_PASS=Alejo123 python3 generar_proforma.py --nco NIC-0998610151001-2026-00028
+P12_PASS=<CLAVE_P12> python3 generar_proforma.py --nco NIC-0998610151001-2026-00028
 
 # Generar todas las pendientes (las no listadas en procesados.json)
-P12_PASS=Alejo123 python3 generar_proforma.py --todos
+P12_PASS=<CLAVE_P12> python3 generar_proforma.py --todos
 
 # Forzar regeneración aunque ya esté en procesados.json
-P12_PASS=Alejo123 python3 generar_proforma.py --nco NIC-xxx --forzar
+P12_PASS=<CLAVE_P12> python3 generar_proforma.py --nco NIC-xxx --forzar
 
 # Solo HTML + PDF sin firma (para probar diseño o cuando no tienes el cert)
 python3 generar_proforma.py --nco NIC-xxx --sin-firmar
@@ -740,10 +742,10 @@ GMAIL_USER=alejosl0801@gmail.com GMAIL_APP_PASS=<app_pass> python3 monitor.py
 GMAIL_USER=... GMAIL_APP_PASS=... python3 monitor.py --loop --intervalo 120
 
 # Con generación automática de proforma al detectar NCO nuevo
-P12_PASS=Alejo123 GMAIL_USER=... GMAIL_APP_PASS=... python3 monitor.py --auto-proforma
+P12_PASS=<CLAVE_P12> GMAIL_USER=... GMAIL_APP_PASS=... python3 monitor.py --auto-proforma
 
 # Con generación Y subida automática al portal
-P12_PASS=Alejo123 GMAIL_USER=... GMAIL_APP_PASS=... \
+P12_PASS=<CLAVE_P12> GMAIL_USER=... GMAIL_APP_PASS=... \
   SERCOP_USER=0952773976001 SERCOP_PASS=... \
   python3 monitor.py --auto-proforma --auto-upload
 ```
@@ -964,7 +966,7 @@ Configurar en: `https://github.com/alejosl0801/SERCOP/settings/secrets/actions`
 |---|---|---|
 | `GMAIL_USER` | `alejosl0801@gmail.com` | Email remitente para alertas |
 | `GMAIL_APP_PASS` | `xxxx xxxx xxxx xxxx` | App password de Gmail (16 chars, sin espacios). Generar en: Google Account → Seguridad → Verificación en 2 pasos → Contraseñas de aplicaciones |
-| `P12_PASS` | `Alejo123` | Contraseña del certificado digital FirmaEC |
+| `P12_PASS` | `<CLAVE_P12>` | Contraseña del certificado digital FirmaEC |
 | `P12_CERT_B64` | (larga cadena base64) | Certificado P12 en base64. Obtener con: `base64 -w 0 14775814_identity_0952773976.p12` |
 | `SERCOP_USER` | `0952773976001` | RUC del proveedor (usuario del portal SERCOP) |
 | `SERCOP_PASS` | (clave del portal) | Contraseña del portal compraspublicas.gob.ec |
@@ -1072,7 +1074,7 @@ print(f"AcroForm eliminado → {pdf_limpio.name}")
 
 # ── PASO 3: Re-firmar con pyHanko ──────────────────────────────────────────
 import os
-os.environ["P12_PASS"] = "Alejo123"  # o leer desde env var
+os.environ["P12_PASS"] = "<CLAVE_P12>"  # o leer desde env var
 
 from generar_proforma import firmar_pdf
 firmar_pdf(pdf_limpio, pdf_final)
@@ -1192,7 +1194,7 @@ doc.save("mismo_archivo.pdf")  # ❌ si ese archivo es el que abriste
 ### `P12_PASS no definido — PDF no firmado`
 La variable de entorno no está seteada. Correr con:
 ```bash
-P12_PASS=Alejo123 python3 generar_proforma.py --nco NIC-xxx
+P12_PASS=<CLAVE_P12> python3 generar_proforma.py --nco NIC-xxx
 ```
 
 ### `ERROR: NIC-xxx no encontrado`
@@ -1337,7 +1339,7 @@ para que el sistema corra completamente automático.
 ### Variables de entorno para uso local
 
 ```bash
-export P12_PASS=Alejo123
+export P12_PASS=<CLAVE_P12>
 export GMAIL_USER=alejosl0801@gmail.com
 export GMAIL_APP_PASS=<app_password_16_chars>
 export SERCOP_USER=0952773976001
@@ -1346,7 +1348,7 @@ export SERCOP_PASS=<clave_portal>
 
 O en un archivo `.env` (que NO se commitea — agregar a `.gitignore`):
 ```
-P12_PASS=Alejo123
+P12_PASS=<CLAVE_P12>
 GMAIL_USER=alejosl0801@gmail.com
 GMAIL_APP_PASS=xxxx xxxx xxxx xxxx
 SERCOP_USER=0952773976001
@@ -1393,7 +1395,7 @@ for f in build_filas(nco['items']):
 python3 generar_proforma.py --nco NIC-0998610151001-2026-00028 --sin-firmar
 
 # Generar proforma con firma
-P12_PASS=Alejo123 python3 generar_proforma.py --nco NIC-0998610151001-2026-00028
+P12_PASS=<CLAVE_P12> python3 generar_proforma.py --nco NIC-0998610151001-2026-00028
 
 # Correr scraper una vez
 python3 scripts/scrape_nco.py
