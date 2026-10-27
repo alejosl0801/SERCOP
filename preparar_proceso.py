@@ -109,7 +109,15 @@ def leer_portal(codigo, estado, carpeta_anexos):
                 raise RuntimeError(f"No encontré {codigo} en el listado ({estado}).")
 
             url = PORTAL + "NCO/" + href.split("/")[-1]
-            page.goto(url, wait_until="domcontentloaded", timeout=60000)
+            for intento in range(4):
+                try:
+                    page.goto(url, wait_until="domcontentloaded", timeout=90000)
+                    break
+                except Exception as e:
+                    log(f"detalle intento {intento + 1}: {str(e).splitlines()[0][:100]}")
+                    if intento == 3:
+                        raise
+                    page.wait_for_timeout(5000)
             page.wait_for_timeout(3000)
             texto = page.inner_text("body")
             filas = page.evaluate("""() => [...document.querySelectorAll('tr')]
@@ -776,7 +784,7 @@ def preparar(codigo, estado="En Curso", salida=None, firmar=True):
     return resumen
 
 
-def aviso_final(r):
+def aviso_final(r, popup=True):
     from vigilante_sercop import mostrar_popup
 
     cuerpo = [f"ENTIDAD: {r['entidad']}", f"CODIGO: {r['codigo']}",
@@ -809,33 +817,92 @@ def aviso_final(r):
         color = "Goldenrod"
         cuerpo.insert(0, "Lo descarté porque exige algo que decidiste no hacer. Si quieres participar igual:\n"
                          f"  py decidir.py {r['codigo']} participa\n")
-    mostrar_popup(banner, color, "\n".join(cuerpo), url2=r.get("html", ""))
+    if popup:
+        mostrar_popup(banner, color, "\n".join(cuerpo), url2=r.get("html", ""))
     try:
         from vigilante_sercop import push_celular
         push_celular(banner, "\n".join(cuerpo)[:900])
     except Exception:
         log("push celular: " + traceback.format_exc())
+    return banner, color, bool(auto)
+
+
+def _ventanas_borrador():
+    try:
+        return bool(cargar_politica().get("avisos", {}).get("ventana_al_terminar_borrador", False))
+    except Exception:
+        return False
+
+
+def _aviso_silencioso(resultados, fallos):
+    """Sin ventana: deja el resumen en ALERTAS.txt y lo manda al celular."""
+    from vigilante_sercop import push_celular
+    L = []
+    for r, _, auto in resultados:
+        est = "DESCARTADO AUTO" if auto else {"ROJO": "CRITICO", "NARANJA": "REVISAR", "VERDE": "OK"}[r["nivel"]]
+        L.append(f"[{est}] {r['entidad']} · faltan {r['faltan']} · ${r['total']} · {'FIRMADA' if r['firmado'] else 'SIN FIRMAR'}")
+    for l, e in fallos:
+        L.append(f"[NO PUDE PREPARAR] {l[:100]}")
+    texto = "\n".join(L)
+    with open(BASE / "ALERTAS.txt", "a", encoding="utf-8") as fh:
+        fh.write(f"===== BORRADORES {datetime.now():%Y-%m-%d %H:%M} =====\n{texto}\n\n")
+    push_celular("Borradores listos" if not fallos else "Borradores (con fallos)", texto[:900])
+    log("aviso silencioso: " + texto.replace("\n", " | ")[:300])
+
+
+def resumen_unico(resultados, fallos):
+    """UNA sola ventana para todo lo que terminó en esta tanda (en vez de una por proceso)."""
+    from vigilante_sercop import mostrar_popup
+    orden = {"ROJO": 0, "NARANJA": 1, "VERDE": 2}
+    resultados = sorted(resultados, key=lambda x: (x[2], orden[x[0]["nivel"]]))
+    lineas = []
+    for r, _, auto in resultados:
+        estado = "DESCARTADO AUTOMATICO" if auto else {"ROJO": "CRITICO", "NARANJA": "REVISAR", "VERDE": "OK"}[r["nivel"]]
+        lineas.append(f"[{estado}] {r['entidad']}\n   {r['codigo']}  ·  faltan {r['faltan']}  ·  "
+                      f"total ${r['total']}  ·  {'FIRMADA' if r['firmado'] else 'SIN FIRMAR'}")
+        for x in r["criticas"][:3]:
+            lineas.append(f"   ! {x}")
+        lineas.append(f"   {r['carpeta']}")
+        lineas.append("")
+    for l, e in fallos:
+        lineas.append(f"[NO PUDE PREPARAR] {l[:120]}\n   {e.strip().splitlines()[-1][:160]}\n")
+    activos = [x for x in resultados if not x[2]]
+    peor = min((orden[x[0]["nivel"]] for x in activos), default=3)
+    color = "Red" if peor == 0 or fallos else "DarkOrange" if peor == 1 else "DarkGreen" if peor == 2 else "Goldenrod"
+    n = len(resultados) + len(fallos)
+    banner = "BORRADOR LISTO" if n == 1 else f"{n} BORRADORES LISTOS"
+    lineas.append("Abre 00 RESUMEN Y ALERTAS.html de cada carpeta antes de decidir.")
+    html = next((r["html"] for r, _, a in resultados if not a), resultados[0][0]["html"] if resultados else "")
+    mostrar_popup(banner, color, "\n".join(lineas), url2=html)
 
 
 def procesar_cola():
     if not COLA.exists():
         return
-    lineas = [l for l in COLA.read_text(encoding="utf-8").splitlines() if l.strip()]
+    lineas = [l.lstrip("﻿") for l in COLA.read_text(encoding="utf-8-sig").splitlines() if l.strip()]
     COLA.write_text("", encoding="utf-8")
+    resultados, fallos = [], []
     for l in lineas:
-        try:
-            job = json.loads(l)
-            r = preparar(job["codigo"], job.get("estado", "En Curso"), job.get("salida"), job.get("firmar", True))
-            aviso_final(r)
-        except Exception:
-            err = traceback.format_exc()
-            log("FALLO preparar:\n" + err)
+        for intento in (1, 2):
             try:
-                from vigilante_sercop import mostrar_popup
-                mostrar_popup("NO PUDE PREPARAR EL BORRADOR", "DarkOrange",
-                              f"Proceso: {l[:160]}\n\nError:\n{err[-700:]}\n\nPrepáralo a mano con: py preparar_proceso.py <codigo>")
+                job = json.loads(l)
+                r = preparar(job["codigo"], job.get("estado", "En Curso"), job.get("salida"), job.get("firmar", True))
+                banner, color, auto = aviso_final(r, popup=False)
+                resultados.append((r, banner, auto))
+                break
             except Exception:
-                pass
+                err = traceback.format_exc()
+                log(f"FALLO preparar (intento {intento}):\n" + err)
+                if intento == 2:
+                    fallos.append((l, err))
+    if resultados or fallos:
+        try:
+            if _ventanas_borrador():
+                resumen_unico(resultados, fallos)
+            else:
+                _aviso_silencioso(resultados, fallos)
+        except Exception:
+            log("resumen único: " + traceback.format_exc())
 
 
 if __name__ == "__main__":

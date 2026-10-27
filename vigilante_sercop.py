@@ -213,7 +213,8 @@ def recordar(filas, vistos):
         cambios = True
         cuerpo = (f"RECORDATORIO: AUN SIN DECISION\nENTIDAD: {f['entidad']}\nCODIGO: {f['codigo']}\nOBJETO: {f['desc']}\n"
                   f"LIMITE: {f['limite']}   (faltan {faltan(lim)})\n\nDecide: py decidir.py {f['codigo']} participa | descarta | enviado")
-        mostrar_popup(f"QUEDAN {faltan(lim).upper()} - DECIDE YA", "Red", cuerpo)
+        if (lim - ahora).total_seconds() < 6 * 3600:
+            mostrar_popup(f"QUEDAN {faltan(lim).upper()} - DECIDE YA", "Red", cuerpo)
         push_celular("Quedan " + faltan(lim), cuerpo[:600])
         log(f"recordatorio {f['codigo']} faltan {faltan(lim)}")
     if cambios:

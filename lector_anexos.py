@@ -96,10 +96,30 @@ def _xlsx(ruta):
     return out
 
 
+def _zip(ruta):
+    import zipfile
+    if ruta.suffix.lower() != ".zip":
+        return [(0, "[FORMATO NO LEGIBLE AUTOMÁTICAMENTE: " + ruta.suffix + "]")]
+    tmp = Path(tempfile.mkdtemp(prefix="sercop_zip_"))
+    out = []
+    try:
+        with zipfile.ZipFile(ruta) as z:
+            z.extractall(tmp)
+        for f in sorted(tmp.rglob("*")):
+            if f.is_file():
+                for pag, txt in leer(f):
+                    out.append((f"{f.name} · {pag}", txt))
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+    return out or [(0, "[ZIP VACÍO]")]
+
+
 def leer(ruta):
     ruta = Path(ruta)
     ext = ruta.suffix.lower()
     try:
+        if ext in (".zip", ".rar", ".7z"):
+            return _zip(ruta)
         if ext == ".pdf":
             return _pdf(ruta)
         if ext in (".docx", ".dotx"):
