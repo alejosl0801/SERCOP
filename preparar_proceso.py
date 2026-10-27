@@ -209,7 +209,7 @@ REGLAS = [
      r"garantia bancaria|poliza|fiel cumplimiento|buen uso del anticipo|garantia de cumplimiento",
      "Garantía bancaria o póliza: costo y trámite previos."),
     ("visita", "CRÍTICO", "Exige visita técnica o inspección previa",
-     r"visita tecnica|visita previa|inspeccion previa|reconocimiento (?:del )?(?:sitio|lugar)",
+     r"visita tecnica (?:obligatoria|previa)|visita (?:tecnica )?(?:es )?obligatoria|obligatori[oa][^.]{0,40}visita|visita previa|inspeccion previa|reconocimiento (?:del )?(?:sitio|lugar)",
      "Visita obligatoria antes de ofertar: confirmar fecha y si es requisito de validez."),
     ("anexos", "ATENCIÓN", "Anexos / formularios que deben presentarse",
      r"\banexo\s*(?:no\.?\s*)?(?:\d+|[ivx]+)\b|check ?list|formulario", "Revisar cada anexo y quién lo firma."),
@@ -277,6 +277,9 @@ PLANTILLA = re.compile(r"\b(COLOCAR|COMPLETAR|INDICAR|ESTABLECER|SELECCIONAR)\b|
 RUIDO_LEGAL = re.compile(r"\b(Ley|Reglamento|Art[ií]culo|Resoluci[oó]n|Servicio Nacional de Contrataci[oó]n|audiencias?|herramienta inform[aá]tica)\b")
 
 
+PLACEHOLDER = re.compile(r"de conformidad a lo requerido|conforme a lo requerido en los t[eé]rminos|\(de conformidad", re.I)
+
+
 def obligaciones(corpus, maximo=150):
     """Red de seguridad independiente de las palabras clave: TODA frase de los anexos de la entidad que
     impone algo al proveedor (deberá, obligatorio, presentar, incluir…). El TDR va primero; se omiten citas legales genéricas."""
@@ -317,6 +320,8 @@ def analizar(corpus, portal):
         for plano in planos:
             for m in re.finditer(patron, plano, re.I):
                 s = extraer_desde(plano, m)
+                if s and PLACEHOLDER.search(s):
+                    continue
                 if s:
                     primero = primero or s
                     if validar is None or validar(s):
@@ -375,6 +380,11 @@ def analizar(corpus, portal):
                     break
             if len(evid) >= 3:
                 break
+        if evid and clave in ("notarial", "juramento") and all(
+                re.search(r"previo a la suscripcion|adjudicad|adjudicatari|ganador|una vez (?:adjudic|selecc)", norm(e["texto"])) for e in evid):
+            nivel = "ATENCIÓN"
+            titulo += " (solo si resultas adjudicado)"
+            accion = "El TDR lo exige después de ganar, previo a la orden de compra: no impide ofertar. Evalúa si lo harías."
         if evid:
             alertas.append({"clave": clave, "nivel": nivel, "titulo": titulo, "accion": accion, "evidencia": evid})
 
@@ -450,7 +460,7 @@ def tarifa_por_volumen(n_recargas, pol):
     return pol["recarga_tarifa_por_libra"]["tramos"][-1]["tarifa"]
 
 
-def construir_items(filas, pol):
+def construir_items(filas, pol, codigo=None):
     """filas del portal -> items para generar_proforma + auditoría de precios."""
     import generar_proforma as gp
 
@@ -458,7 +468,15 @@ def construir_items(filas, pol):
     items, auditoria, pendientes = [], [], []
     n_recargas = 0
 
+    try:
+        ajuste = json.loads((BASE / "ajustes_procesos.json").read_text(encoding="utf-8")).get(codigo or "", {})
+    except Exception:
+        ajuste = {}
+    excluir = [norm(x) for x in ajuste.get("excluir_items", [])]
     for r in filas:
+        if excluir and any(x in norm(r[3]) for x in excluir):
+            log(f"{codigo}: ítem excluido por ajuste: {r[3][:80]}")
+            continue
         cpc, desc_of, unidad, cant = r[1], r[3], r[4] if len(r) > 4 else "Unidad", r[5] if len(r) > 5 else "1"
         cant_f = float(str(cant).replace(",", "")) if re.match(r"^[\d.,]+$", str(cant)) else 1.0
         det = re.sub(r"\bP\.?Q\.?S\.?\b", "PQS", desc_of.replace(",", "."), flags=re.I)
@@ -692,7 +710,7 @@ def preparar(codigo, estado="En Curso", salida=None, firmar=True):
     (carpeta / "TEXTO COMPLETO DE LOS ANEXOS.txt").write_text("\n".join(texto_completo), encoding="utf-8")
     campos, alertas = analizar(corpus, pc)
 
-    items, auditoria, pendientes, tarifa, n_rec = construir_items(portal["filas"], pol)
+    items, auditoria, pendientes, tarifa, n_rec = construir_items(portal["filas"], pol, codigo)
     vig = campos["vigencia_dias"] or pol["proforma"]["vigencia_por_defecto_dias"]
     if not campos["vigencia_dias"]:
         pendientes.append(f"No encontré la vigencia de la oferta en el TDR: puse {vig} días por defecto. Verifícala.")

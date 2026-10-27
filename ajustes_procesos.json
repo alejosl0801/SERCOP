@@ -1,0 +1,7 @@
+{
+  "comentario": "Ajustes por proceso decididos por Alejandro. 'excluir_items': palabras que, si aparecen en la descripción oficial del ítem, lo sacan de la proforma.",
+  "NIC-1768181900001-2026-00094": {
+    "excluir_items": ["HALOTRO"],
+    "motivo": "Alejandro 2026-10-27: no cotizar el mantenimiento de extintores HALOTRON 10 lb (sin precio ni capacidad)."
+  }
+}
