@@ -10,7 +10,7 @@ NUM = r"(?:(\d{1,3})|(" + "|".join(PALABRAS) + r"))"
 NUMERO = r"(?:[a-záéíóú]+\s*)?\(?\s*" + NUM + r"\s*\)?\s*(?:\([a-záéíóú ]+\)\s*)?"
 
 PAT = {
-    "plazo": re.compile(r"(?:plazo\s+(?:estimado\s+|m[aá]ximo\s+|total\s+)?(?:de|para)\s+(?:la\s+|el\s+)?(?:ejecuci[oó]n|entrega|prestaci[oó]n)[^.;]{0,160}?(?:es de|ser[aá] de|de|es|:|m[aá]ximo de|estimado[^.;]{0,40}? de)|plazo\s+de)\s*" + NUMERO +
+    "plazo": re.compile(r"(?:plazo\s+(?:estimado\s+|m[aá]ximo\s+|total\s+)?(?:de|para)\s+(?:la\s+|el\s+)?(?:ejecuci[oó]n|entrega|prestaci[oó]n)[^.;]{0,160}?(?:es de|ser[aá] de|de|es|:|m[aá]ximo de|estimado[^.;]{0,40}? de)|plazo\s+de|plazo\s+m[aá]ximo\s+de)\s*" + NUMERO +
                         r"(d[ií]as?|semanas?|horas?)\s*(calendario|laborables|h[aá]biles|h[aá]bil)?", re.I),
     "vigencia": re.compile(r"vigencia(?:(?!vigencia|garant)[^.;\d]){0,160}?(?:de|:|m[ií]nima de|m[ií]nimo de)\s*" +
                            NUMERO + r"(d[ií]as?|meses)", re.I),
@@ -42,6 +42,10 @@ def extraer(corpus):
                 cita = _contexto(t, m)
                 if campo == "vigencia" and re.search(r"garant|orden de compra|contrato", t[max(0, m.start() - 60): m.start()], re.I):
                     continue  # vigencia de la garantía/contrato, no de la oferta
+                if campo == "plazo" and re.search(r"adicional|correctiv|reposici[oó]n|repuesto", t[max(0, m.start() - 160): m.start()], re.I):
+                    continue  # plazo de un servicio adicional, no el de ejecución principal
+                if campo == "plazo" and re.search(r"notificaci[oó]n formal", t[m.end(): m.end() + 80], re.I):
+                    continue
                 if campo == "plazo" and re.search(r"peticion|petici[oó]n|solicitud escrita|requerimiento", t[m.end(): m.end() + 90], re.I):
                     continue  # plazo de respuesta a una petición, no plazo de ejecución
                 if re.search(r"COMPLETAR|COLOCAR|\(n[uú]mero|XXXX", m.group(0), re.I):
