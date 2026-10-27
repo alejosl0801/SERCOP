@@ -1,11 +1,11 @@
 {
   "comentario": "Política comercial que usa preparar_proceso.py. Editar aquí, no en el código. Todo valor marcado 'por confirmar' lo debe decidir Alejandro.",
   "recarga_tarifa_por_libra": {
-    "fuente": "Alejandro, chat 2026-10-22: ~0.80/lb con pocos extintores (~10); 0.75 o 0.70/lb con ~50 o más; igual PQS y CO2. catalogo_empresas.pdf: PQS 0.80, CO2 0.75.",
+    "fuente": "Alejandro, chat 2026-10-22: ~0.80/lb con pocos extintores (~10); 0.75 o 0.70/lb con ~50 o más; igual PQS y CO2. catalogo_empresas.pdf: PQS 0.80, CO2 0.75. | 2026-10-27: tramo 0.80 sube a 49 extintores; coincide con catalogo_empresas.pdf (PQS 5 lb = $4.00).",
     "estado": "tramos exactos por confirmar",
     "tramos": [
       {
-        "hasta_extintores": 20,
+        "hasta_extintores": 49,
         "tarifa": 0.8
       },
       {

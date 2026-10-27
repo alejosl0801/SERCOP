@@ -206,10 +206,10 @@ REGLAS = [
     ("juramento", "CRÍTICO", "Pide DECLARACIÓN JURAMENTADA",
      r"juramenta|bajo juramento", "Declaración bajo juramento a nombre de Alejandro; no incluirla sin su autorización."),
     ("garantias", "CRÍTICO", "Pide garantías o pólizas",
-     r"garantia bancaria|poliza|fiel cumplimiento|buen uso del anticipo|garantia de cumplimiento",
+     r"garantia bancaria|poliza de (?:seguro|fiel|buen)|fiel cumplimiento|buen uso del anticipo|garantia de cumplimiento",
      "Garantía bancaria o póliza: costo y trámite previos."),
     ("visita", "CRÍTICO", "Exige visita técnica o inspección previa",
-     r"visita tecnica (?:obligatoria|previa)|visita (?:tecnica )?(?:es )?obligatoria|obligatori[oa][^.]{0,40}visita|visita previa|inspeccion previa|reconocimiento (?:del )?(?:sitio|lugar)",
+     r"visita tecnica (?:obligatoria|previa)|visita (?:tecnica )?(?:es )?obligatoria|obligatori[oa][^.]{0,40}visita|visita previa|inspeccion previa (?:del|de la|de las|al) (?:sitio|local|lugar|instalacion|inmueble|edificio)|inspeccion previa obligatoria|reconocimiento (?:del )?(?:sitio|lugar)",
      "Visita obligatoria antes de ofertar: confirmar fecha y si es requisito de validez."),
     ("anexos", "ATENCIÓN", "Anexos / formularios que deben presentarse",
      r"\banexo\s*(?:no\.?\s*)?(?:\d+|[ivx]+)\b|check ?list|formulario", "Revisar cada anexo y quién lo firma."),
@@ -375,13 +375,13 @@ def analizar(corpus, portal):
                     continue
                 a, b = max(0, m.start() - 110), min(len(plano), m.end() + 150)
                 rangos.append((a, b))
-                evid.append({"fuente": fuente, "pagina": pag, "texto": plano[a:b]})
+                evid.append({"fuente": fuente, "pagina": pag, "texto": plano[a:b], "ctx": plano[max(0, a - 800):b]})
                 if len(evid) >= 3:
                     break
             if len(evid) >= 3:
                 break
         if evid and clave in ("notarial", "juramento") and all(
-                re.search(r"previo a la suscripcion|adjudicad|adjudicatari|ganador|una vez (?:adjudic|selecc)", norm(e["texto"])) for e in evid):
+                re.search(r"previo a la suscripcion|previos a la suscripcion|procedera unicamente|estrictamente necesaria|expresamente prevista en los pliegos|para suscribir (?:el )?contrato|adjudicad|adjudicatari|ganador|una vez (?:adjudic|selecc)", norm(e.get("ctx", e["texto"]))) for e in evid):
             nivel = "ATENCIÓN"
             titulo += " (solo si resultas adjudicado)"
             accion = "El TDR lo exige después de ganar, previo a la orden de compra: no impide ofertar. Evalúa si lo harías."
@@ -460,7 +460,7 @@ def tarifa_por_volumen(n_recargas, pol):
     return pol["recarga_tarifa_por_libra"]["tramos"][-1]["tarifa"]
 
 
-def construir_items(filas, pol, codigo=None):
+def construir_items(filas, pol, codigo=None, objeto=""):
     """filas del portal -> items para generar_proforma + auditoría de precios."""
     import generar_proforma as gp
 
@@ -481,6 +481,10 @@ def construir_items(filas, pol, codigo=None):
         cant_f = float(str(cant).replace(",", "")) if re.match(r"^[\d.,]+$", str(cant)) else 1.0
         det = re.sub(r"\bP\.?Q\.?S\.?\b", "PQS", desc_of.replace(",", "."), flags=re.I)
         tipo, agente, lbs = gp.detect_tipo(det), gp.detect_agente(det), gp.extract_lbs(det)
+        interpretado = False
+        if tipo == "desconocido" and "recarga" in norm(objeto) and "adquisicion" not in norm(objeto) and agente in ("PQS", "CO2") and lbs:
+            tipo, interpretado = "recarga", True  # el objeto del proceso es un servicio de recarga
+            det = "Recarga de " + det
         it = {"descripcion": det, "descripcion_oficial": desc_of, "cpc": cpc, "unidad": unidad or "Unidad",
               "cantidad": cant_f}
         info = {"descripcion": desc_of, "cantidad": cant_f, "tipo": tipo, "agente": agente, "lbs": lbs,
@@ -528,6 +532,8 @@ def construir_items(filas, pol, codigo=None):
         else:
             info["fuente"] = "NO RECONOCIDO"
             pendientes.append(f"Ítem no reconocido, necesito tu precio: {desc_of}")
+        if interpretado and tipo == "recarga":
+            info["alertas"].append("Interpretado como RECARGA porque el objeto del proceso es 'mantenimiento y recarga'")
         items.append(it)
         auditoria.append(info)
 
@@ -710,7 +716,7 @@ def preparar(codigo, estado="En Curso", salida=None, firmar=True):
     (carpeta / "TEXTO COMPLETO DE LOS ANEXOS.txt").write_text("\n".join(texto_completo), encoding="utf-8")
     campos, alertas = analizar(corpus, pc)
 
-    items, auditoria, pendientes, tarifa, n_rec = construir_items(portal["filas"], pol, codigo)
+    items, auditoria, pendientes, tarifa, n_rec = construir_items(portal["filas"], pol, codigo, pc["objeto"])
     vig = campos["vigencia_dias"] or pol["proforma"]["vigencia_por_defecto_dias"]
     if not campos["vigencia_dias"]:
         pendientes.append(f"No encontré la vigencia de la oferta en el TDR: puse {vig} días por defecto. Verifícala.")
