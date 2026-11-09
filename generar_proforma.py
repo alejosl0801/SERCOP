@@ -376,11 +376,12 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
       <td style="border:none;vertical-align:middle;text-align:center;">
         <h2>PROFORMA COMERCIAL</h2>
         <div style="font-size:10px;"><strong>{razon}</strong>{" — nombre comercial: " + nombre_com if nombre_com else ""} — RUC: {prov['ruc']}</div>
-        <div style="font-size:9px;">{prov['direccion']} | {prov['email']}</div>
+        <div style="font-size:9px;">{prov['direccion']} | Tel. {prov.get('telefono') or '—'} | {prov['email']}</div>
       </td>
       <td style="border:1px solid #555;width:120px;vertical-align:top;font-size:9px;padding:4px;">
+        <strong>Proforma Nro.:</strong><br>{nco.get('numero_proforma') or codigo}<br><br>
         <strong>Código NCO:</strong><br>{codigo}<br><br>
-        <strong>Fecha:</strong><br>Guayaquil, {fecha}
+        <strong>Fecha de emisión:</strong><br>Guayaquil, {fecha}
       </td>
     </tr>
   </table>
@@ -390,6 +391,9 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
     <tr>
       <td style="border:1px solid #555;width:50%;"><span class="ref">Entidad:</span><strong>{entidad}</strong></td>
       <td style="border:1px solid #555;width:50%;"><span class="ref">Proceso:</span>{codigo}</td>
+    </tr>
+    <tr>
+      <td colspan="2" style="border:1px solid #555;"><span class="ref">Proforma dirigida a:</span>{entidad}</td>
     </tr>
   </table>
 
@@ -402,6 +406,10 @@ def render_html(nco: dict, filas: list[ResultadoMatch]) -> str:
     <tr>
       <td style="border:1px solid #555;"><span class="ref">Representante:</span>{prov['representante']}</td>
       <td style="border:1px solid #555;"><span class="ref">Email:</span>{prov['email']}</td>
+    </tr>
+    <tr>
+      <td style="border:1px solid #555;"><span class="ref">Dirección:</span>{prov['direccion']}</td>
+      <td style="border:1px solid #555;"><span class="ref">Teléfono:</span>{prov.get('telefono') or '—'}</td>
     </tr>
   </table>
 

@@ -11,10 +11,10 @@ NUMERO = r"(?:[a-záéíóú]+\s*)?\(?\s*" + NUM + r"\s*\)?\s*(?:\([a-záéíó�
 
 PAT = {
     "plazo": re.compile(r"(?:plazo\s+(?:estimado\s+|m[aá]ximo\s+|total\s+)?(?:de|para)\s+(?:la\s+|el\s+)?(?:ejecuci[oó]n|entrega|prestaci[oó]n)[^.;]{0,160}?(?:es de|ser[aá] de|de|es|:|m[aá]ximo de|estimado[^.;]{0,40}? de)|plazo\s+de|plazo\s+m[aá]ximo\s+de)\s*" + NUMERO +
-                        r"(d[ií]as?|semanas?|horas?)\s*(calendario|laborables|h[aá]biles|h[aá]bil)?", re.I),
+                        r"(d[ií]as?|semanas?|horas?)\s*(calendario|laborables|h[aá]biles|h[aá]bil|t[eé]rmino)?", re.I),
     "vigencia": re.compile(r"vigencia(?:(?!vigencia|garant)[^.;\d]){0,160}?(?:de|:|m[ií]nima de|m[ií]nimo de)\s*" +
                            NUMERO + r"(d[ií]as?|meses)", re.I),
-    "garantia": re.compile(r"garant[ií]a[^.;]{0,160}?(?:de|ser[aá] de|por|:|m[ií]nima de|al menos)\s*" + NUMERO + r"(meses|a[nñ]os?)", re.I),
+    "garantia": re.compile(r"garant[ií]a[^.;]{0,160}?(?:de|ser[aá] de|por|:|m[ií]nima de|al menos)\s*" + NUMERO + r"(meses|a[nñ]os?|d[ií]as)", re.I),
 }
 
 

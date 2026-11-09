@@ -247,6 +247,7 @@ def extraer_desde(plano, m, max_chars=420):
     c = CORTE.search(resto)
     if c:
         resto = resto[: c.start()]
+    resto = re.sub(r"(?:[A-ZÁÉÍÓÚÑ]{3,}\s+){2,8}P[ÁA]GINA:?\s*\d+\s*de\s*\d+", " ", resto)
     resto = re.sub(r"\(¿[^)]*\)", " ", resto)
     resto = re.sub(r"^\s*[A-ZÁÉÍÓÚÑ0-9/.,()¿? -]{8,}(?=[A-ZÁÉÍÓÚÑ][a-záéíóúñ])", "", aplanar(resto))
     frases = [f.strip() for f in re.split(r"(?<=[.;])\s+", resto) if f.strip()]
@@ -320,7 +321,7 @@ def analizar(corpus, portal):
         for plano in planos:
             for m in re.finditer(patron, plano, re.I):
                 s = extraer_desde(plano, m)
-                if s and PLACEHOLDER.search(s):
+                if s and (PLACEHOLDER.search(s) or re.search(r"[.…]{4,}", s)):
                     continue
                 if s:
                     primero = primero or s
@@ -473,13 +474,14 @@ def construir_items(filas, pol, codigo=None, objeto=""):
     except Exception:
         ajuste = {}
     excluir = [norm(x) for x in ajuste.get("excluir_items", [])]
+    precios_fijos = {norm(k): v for k, v in ajuste.get("precios", {}).items()}
     for r in filas:
         if excluir and any(x in norm(r[3]) for x in excluir):
             log(f"{codigo}: ítem excluido por ajuste: {r[3][:80]}")
             continue
         cpc, desc_of, unidad, cant = r[1], r[3], r[4] if len(r) > 4 else "Unidad", r[5] if len(r) > 5 else "1"
         cant_f = float(str(cant).replace(",", "")) if re.match(r"^[\d.,]+$", str(cant)) else 1.0
-        det = re.sub(r"\bP\.?Q\.?S\.?\b", "PQS", desc_of.replace(",", "."), flags=re.I)
+        det = re.sub(r"\bC0(2)\b", "CO2", re.sub(r"\bP\.?Q\.?S\.?\b", "PQS", desc_of.replace(",", "."), flags=re.I), flags=re.I)
         tipo, agente, lbs = gp.detect_tipo(det), gp.detect_agente(det), gp.extract_lbs(det)
         interpretado = False
         if tipo == "desconocido" and "recarga" in norm(objeto) and "adquisicion" not in norm(objeto) and agente in ("PQS", "CO2") and lbs:
@@ -490,6 +492,7 @@ def construir_items(filas, pol, codigo=None, objeto=""):
         info = {"descripcion": desc_of, "cantidad": cant_f, "tipo": tipo, "agente": agente, "lbs": lbs,
                 "fuente": "", "precio": None, "alertas": []}
         nd = norm(desc_of)
+        fijo = next((v for k, v in precios_fijos.items() if k in nd), None)
 
         servicio = None
         for s in pol["servicios_con_precio_conocido"]:
@@ -497,7 +500,10 @@ def construir_items(filas, pol, codigo=None, objeto=""):
                 servicio = s
             if s["clave"].startswith("mantenimiento de manometros") and "manometro" in nd and "mantenimiento" in nd:
                 servicio = s
-        if servicio:
+        if fijo is not None:
+            it["precio_unitario"] = fijo
+            info.update(precio=fijo, fuente="precio indicado por Alejandro")
+        elif servicio:
             it["precio_unitario"] = servicio["precio"]
             info.update(precio=servicio["precio"], fuente=f"precedente: {servicio['fuente']}")
         elif tipo == "recarga" and agente in ("PQS", "CO2") and lbs:
@@ -727,22 +733,36 @@ def preparar(codigo, estado="En Curso", salida=None, firmar=True):
         pendientes.append("No encontré el plazo de ejecución en el TDR: revisar manualmente.")
     pago = campos["pago"] or pc["forma_pago_portal"] or "Conforme a los términos de referencia de la entidad contratante."
     gm = campos.get("garantia_meses")
-    garantia = (f"Garantía técnica de {gm} meses por defectos de taller y funcionamiento, conforme al TDR."
-                if gm and gm % 12 else
-                f"Garantía técnica de {gm // 12} año{'s' if gm // 12 > 1 else ''} por defectos de taller y funcionamiento, conforme al TDR."
-                if gm else "Garantía técnica conforme al TDR de la entidad contratante.")
-    if not gm:
+    gdias = (campos.get("condiciones", {}).get("garantia") or {}).get("elegido", {}).get("dias")
+    if gdias and gdias % 365 == 0:
+        periodo = f"{gdias // 365} año{'s' if gdias // 365 > 1 else ''}"
+    elif gdias and gdias % 30 == 0:
+        periodo = f"{gdias // 30} meses"
+    elif gdias:
+        periodo = f"{gdias} días"
+    garantia = (f"Garantía técnica de {periodo} por defectos de taller y funcionamiento, conforme al TDR."
+                if gdias else "Garantía técnica conforme al TDR de la entidad contratante.")
+    if not gdias:
         pendientes.append("No encontré el periodo de garantía técnica en el TDR: revisa el texto de garantía de la proforma.")
     if re.search(r"describir", norm(campos.get("garantia", ""))):
         pendientes.append("El TDR pide describir cómo se responde por la garantía: revisa el texto de garantía de la proforma.")
 
+    try:
+        aj = json.loads((BASE / "ajustes_procesos.json").read_text(encoding="utf-8")).get(codigo, {})
+    except Exception:
+        aj = {}
+    plazo = aj.get("plazo_entrega", plazo)
+    pago = aj.get("forma_pago", pago)
+    garantia = aj.get("garantia", garantia)
+    lugar = aj.get("lugar_entrega") or campos["lugar"] or f"{pc['direccion']}, {pc['canton']}"
     nco = {
         "id": "", "codigo": codigo, "tipo": pc["tipo"], "fecha_publicacion": pc["publicacion"],
         "provincia_canton": f"{pc['provincia']} - {pc['canton']}", "descripcion": pc["objeto"],
         "estado": pc["estado"], "fecha_limite": pc["limite"], "entidad": pc["entidad"],
         "funcionario": pc["funcionario"], "email": pc["email"], "direccion": pc["direccion"], "url_detalle": portal["url"],
+        "numero_proforma": f"PREV-{num}" if num else None,
         "plazo_entrega": plazo, "forma_pago": pago, "vigencia_dias": vig, "garantia": garantia,
-        "lugar_entrega": campos["lugar"] or f"{pc['direccion']}, {pc['canton']}",
+        "lugar_entrega": lugar,
         "especificaciones": ["Se cumplirá íntegramente lo establecido en las especificaciones técnicas y términos de referencia "
                              "(TDR) de la entidad contratante para cada ítem, incluidos los entregables y obligaciones del contratista."],
         "incluir_carta": pol["proforma"]["incluir_carta_laft"], "items": items,

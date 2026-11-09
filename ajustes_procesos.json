@@ -1,7 +1,14 @@
 {
-  "comentario": "Ajustes por proceso decididos por Alejandro. 'excluir_items': palabras que, si aparecen en la descripción oficial del ítem, lo sacan de la proforma.",
+  "comentario": "Ajustes por proceso. excluir_items: palabras que sacan un ítem. precios: {palabra de la descripción: precio unitario}. forma_pago / lugar_entrega / garantia / plazo_entrega: textos que reemplazan lo extraído (verificados a mano contra el TDR).",
   "NIC-1768181900001-2026-00094": {
     "excluir_items": ["HALOTRO"],
-    "motivo": "Alejandro 2026-10-27: no cotizar el mantenimiento de extintores HALOTRON 10 lb (sin precio ni capacidad)."
+    "motivo": "Alejandro 2026-10-27: no cotizar HALOTRON (proceso descartado)."
+  },
+  "NIC-0968522230001-2026-00071": {
+    "plazo_entrega": "3 días término, contados desde la notificación de la orden de compra (TDR numeral 5).",
+    "forma_pago": "Contra entrega del servicio, una vez recibido, previa presentación de la factura, la garantía correspondiente, el informe favorable del Administrador de la Orden de Compra y el Acta de Entrega-Recepción Definitiva (TDR numeral 7).",
+    "lugar_entrega": "Entrega en los puntos señalados por el Administrador de la Orden de Compra, en Guayaquil: parqueo de la calle P. Ycaza y Panamá (vehículos institucionales) y pisos 5, 6 y 7 del edificio La Internacional (calle Aguirre No. 324 y Chile). Retiro con inspección in situ y recarga en instalaciones del proveedor.",
+    "garantia": "Garantía de 365 días por la buena calidad del servicio, contada desde la suscripción del Acta de Entrega-Recepción Definitiva (TDR numeral 12.b).",
+    "precios": {}
   }
 }
